@@ -9,7 +9,7 @@ Scope
 
 Primary decisions
 - LLM: Foundry (single provider for this project).
-- Document storage: Blob storage (prefer Azurite local emulator or free cloud tier).
+- Document storage: Blob storage (prefer free cloud tier).
 
 Testing & QA
 - No automated tests required for this study project.
