@@ -1,0 +1,20 @@
+SAMPLE INSURANCE DOCUMENT - Beta Care Insurance
+Annual Coverage Limit: €80,000/year
+Dental Coverage: Included up to €2,000/year
+Vision Coverage: Not included
+Hospitalisation Per Day: €350/night
+Monthly Premium: €240/month
+Family Plan Available: Yes, up to 4 members
+
+This is a sample document for development and testing purposes.
+Page 1 of 2
+
+TERMS AND CONDITIONS
+Coverage is subject to policy terms. Dental covers routine and emergency procedures.
+Vision includes annual eye exam and prescription lenses.
+Hospitalisation covers room, board, and surgery up to the stated limit.
+
+Page 2 of 2
+PRE-EXISTING CONDITIONS: 12-month waiting period applies.
+CLAIMS: Submit within 90 days of treatment.
+

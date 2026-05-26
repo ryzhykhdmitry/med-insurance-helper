@@ -1,0 +1,12 @@
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+  background: #1a73e8;
+  color: white;
+}
+.app-brand { font-weight: 700; font-size: 1rem; margin-right: auto; }
+.app-nav a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 0.95rem; padding: 4px 8px; border-radius: 4px; }
+.app-nav a.active { background: rgba(255,255,255,0.2); color: white; }
+.app-nav a:hover { background: rgba(255,255,255,0.15); }

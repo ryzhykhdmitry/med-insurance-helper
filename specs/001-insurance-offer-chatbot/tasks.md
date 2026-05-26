@@ -13,11 +13,11 @@
 
 **Purpose**: Project scaffolding, tooling configuration, and local development environment
 
-- [ ] T001 [P] Initialize .NET 8 WebAPI solution and project at src/backend/MedInsuranceHelper.sln and src/backend/MedInsuranceHelper.Api/
-- [ ] T002 [P] Initialize Angular 17 frontend app shell with ng new at src/frontend/ (enable routing, use standalone components)
-- [ ] T003 Add Azurite local blob-storage setup script at scripts/setup-azurite.ps1 with start, stop, and reset commands
-- [ ] T004 Create .env.example with all required env vars: FOUNDRY_API_KEY, BLOB_CONN_STRING, FOUNDRY_ENDPOINT, APP_ENV at .env.example
-- [ ] T005 Add AppSettings model and appsettings.json at src/backend/MedInsuranceHelper.Api/appsettings.json and src/backend/MedInsuranceHelper.Api/Configuration/AppSettings.cs
+- [X] T001 [P] Initialize .NET 8 WebAPI solution and project at src/backend/MedInsuranceHelper.sln and src/backend/MedInsuranceHelper.Api/
+- [X] T002 [P] Initialize Angular 17 frontend app shell with ng new at src/frontend/ (enable routing, use standalone components)
+- [X] T003 Add Azurite local blob-storage setup script at scripts/setup-azurite.ps1 with start, stop, and reset commands
+- [X] T004 Create .env.example with all required env vars: FOUNDRY_API_KEY, BLOB_CONN_STRING, FOUNDRY_ENDPOINT, APP_ENV at .env.example
+- [X] T005 Add AppSettings model and appsettings.json at src/backend/MedInsuranceHelper.Api/appsettings.json and src/backend/MedInsuranceHelper.Api/Configuration/AppSettings.cs
 
 ---
 
@@ -27,16 +27,16 @@
 
 **⚠️ CRITICAL**: No user story implementation can start until this phase is complete
 
-- [ ] T006 [P] Create InsuranceOffer domain model with all fields (id, insurer_name, title, blob_uri, uploaded_at, version, status enum) at src/backend/MedInsuranceHelper.Api/Models/InsuranceOffer.cs
-- [ ] T007 [P] Create DocumentChunk domain model with all fields (id, offer_id FK, text, start_page, end_page, offset, length, embedding ref, created_at) at src/backend/MedInsuranceHelper.Api/Models/DocumentChunk.cs
-- [ ] T008 [P] Implement BlobStorageService (Azure.Storage.Blobs SDK, Azurite-compatible) with upload, download and list operations at src/backend/MedInsuranceHelper.Api/Services/BlobStorageService.cs
-- [ ] T009 Implement PdfIngestionService (parse PDF to text pages, extract page numbers, OCR fallback stub) at src/backend/MedInsuranceHelper.Api/Services/PdfIngestionService.cs
-- [ ] T010 Implement ChunkingService (sliding window with configurable size/overlap, attach page+offset metadata) at src/backend/MedInsuranceHelper.Api/Services/ChunkingService.cs
-- [ ] T011 Implement EmbeddingService wrapper (calls Foundry embeddings API, batching, error handling) at src/backend/MedInsuranceHelper.Api/Services/EmbeddingService.cs
-- [ ] T012 Implement FileVectorStore (local JSON file-backed, cosine similarity search, topK) at src/backend/MedInsuranceHelper.Api/Services/VectorStore/FileVectorStore.cs
-- [ ] T013 Implement FoundryClient (Azure AI Foundry auth, chat completion with streaming SSE, retry logic) at src/backend/MedInsuranceHelper.Api/Services/FoundryClient.cs
-- [ ] T014 Implement IngestController (POST /api/ingest) — accepts blob URI + insurer info, persists InsuranceOffer, returns 202 with offerId at src/backend/MedInsuranceHelper.Api/Controllers/IngestController.cs
-- [ ] T015 Implement ProcessingWorker background job (POST /api/process/{offerId}) — downloads PDF from blob, chunks, embeds, stores vectors at src/backend/MedInsuranceHelper.Api/Workers/ProcessingWorker.cs
+- [X] T006 [P] Create InsuranceOffer domain model with all fields (id, insurer_name, title, blob_uri, uploaded_at, version, status enum) at src/backend/MedInsuranceHelper.Api/Models/InsuranceOffer.cs
+- [X] T007 [P] Create DocumentChunk domain model with all fields (id, offer_id FK, text, start_page, end_page, offset, length, embedding ref, created_at) at src/backend/MedInsuranceHelper.Api/Models/DocumentChunk.cs
+- [X] T008 [P] Implement BlobStorageService (Azure.Storage.Blobs SDK, Azurite-compatible) with upload, download and list operations at src/backend/MedInsuranceHelper.Api/Services/BlobStorageService.cs
+- [X] T009 Implement PdfIngestionService (parse PDF to text pages, extract page numbers, OCR fallback stub) at src/backend/MedInsuranceHelper.Api/Services/PdfIngestionService.cs
+- [X] T010 Implement ChunkingService (sliding window with configurable size/overlap, attach page+offset metadata) at src/backend/MedInsuranceHelper.Api/Services/ChunkingService.cs
+- [X] T011 Implement EmbeddingService wrapper (calls Foundry embeddings API, batching, error handling) at src/backend/MedInsuranceHelper.Api/Services/EmbeddingService.cs
+- [X] T012 Implement FileVectorStore (local JSON file-backed, cosine similarity search, topK) at src/backend/MedInsuranceHelper.Api/Services/VectorStore/FileVectorStore.cs
+- [X] T013 Implement FoundryClient (Azure AI Foundry auth, chat completion with streaming SSE, retry logic) at src/backend/MedInsuranceHelper.Api/Services/FoundryClient.cs
+- [X] T014 Implement IngestController (POST /api/ingest) — accepts blob URI + insurer info, persists InsuranceOffer, returns 202 with offerId at src/backend/MedInsuranceHelper.Api/Controllers/IngestController.cs
+- [X] T015 Implement ProcessingWorker background job (POST /api/process/{offerId}) — downloads PDF from blob, chunks, embeds, stores vectors at src/backend/MedInsuranceHelper.Api/Workers/ProcessingWorker.cs
 
 **Checkpoint**: Foundation ready — IngestController, vector store, FoundryClient, and chunking pipeline are operational. User story phases can now begin.
 
@@ -50,14 +50,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement SearchController (POST /api/search — embed query, query FileVectorStore, return topK chunks with page/score) at src/backend/MedInsuranceHelper.Api/Controllers/SearchController.cs
-- [ ] T017 [US1] Implement RetrievalService (orchestrate embedding query + vector lookup, assemble ranked DocumentChunk results) at src/backend/MedInsuranceHelper.Api/Services/RetrievalService.cs
-- [ ] T018 [US1] Implement LLMPipelineService (compose RAG prompt from chunks, call FoundryClient with streaming, produce Citation objects) at src/backend/MedInsuranceHelper.Api/Services/LLMPipelineService.cs
-- [ ] T019 [US1] Implement StreamController (GET /api/stream — SSE endpoint, pipes FoundryClient stream tokens to client, flushes citations at end) at src/backend/MedInsuranceHelper.Api/Controllers/StreamController.cs
-- [ ] T020 [US1] Add "no relevant information found" guard in LLMPipelineService: when RetrievalService returns empty or low-confidence results, return a clear not-found message without calling Foundry at src/backend/MedInsuranceHelper.Api/Services/LLMPipelineService.cs
-- [ ] T021 [US1] Create Angular ChatModule with ChatComponent (message input, message list, loading indicator) at src/frontend/src/app/chat/chat.component.ts
-- [ ] T022 [US1] Implement ChatService (EventSource-based SSE client, accumulate streamed tokens, parse citation payloads) at src/frontend/src/app/chat/chat.service.ts
-- [ ] T023 [US1] Add citation display in chat message template (source document name, page reference, excerpt tooltip) at src/frontend/src/app/chat/chat.component.html
+- [X] T016 [P] [US1] Implement SearchController (POST /api/search — embed query, query FileVectorStore, return topK chunks with page/score) at src/backend/MedInsuranceHelper.Api/Controllers/SearchController.cs
+- [X] T017 [US1] Implement RetrievalService (orchestrate embedding query + vector lookup, assemble ranked DocumentChunk results) at src/backend/MedInsuranceHelper.Api/Services/RetrievalService.cs
+- [X] T018 [US1] Implement LLMPipelineService (compose RAG prompt from chunks, call FoundryClient with streaming, produce Citation objects) at src/backend/MedInsuranceHelper.Api/Services/LLMPipelineService.cs
+- [X] T019 [US1] Implement StreamController (GET /api/stream — SSE endpoint, pipes FoundryClient stream tokens to client, flushes citations at end) at src/backend/MedInsuranceHelper.Api/Controllers/StreamController.cs
+- [X] T020 [US1] Add "no relevant information found" guard in LLMPipelineService: when RetrievalService returns empty or low-confidence results, return a clear not-found message without calling Foundry at src/backend/MedInsuranceHelper.Api/Services/LLMPipelineService.cs
+- [X] T021 [US1] Create Angular ChatModule with ChatComponent (message input, message list, loading indicator) at src/frontend/src/app/chat/chat.component.ts
+- [X] T022 [US1] Implement ChatService (EventSource-based SSE client, accumulate streamed tokens, parse citation payloads) at src/frontend/src/app/chat/chat.service.ts
+- [X] T023 [US1] Add citation display in chat message template (source document name, page reference, excerpt tooltip) at src/frontend/src/app/chat/chat.component.html
 
 **Checkpoint**: User Story 1 fully functional — user can ask questions in the chat UI and receive streamed, cited answers from real PDFs.
 
@@ -71,9 +71,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Implement CompareController (POST /api/compare — accepts offerIds + aspects, aggregates chunk results per offer per aspect) at src/backend/MedInsuranceHelper.Api/Controllers/CompareController.cs
-- [ ] T025 [US2] Implement ComparisonService (for each aspect, run RetrievalService per offerId, normalise snippets, flag missing coverage with explicit null marker) at src/backend/MedInsuranceHelper.Api/Services/ComparisonService.cs
-- [ ] T026 [US2] Add CompareComponent in Angular (side-by-side table layout, missing-data badge, per-cell citation links) at src/frontend/src/app/compare/compare.component.ts and compare.component.html
+- [X] T024 [P] [US2] Implement CompareController (POST /api/compare — accepts offerIds + aspects, aggregates chunk results per offer per aspect) at src/backend/MedInsuranceHelper.Api/Controllers/CompareController.cs
+- [X] T025 [US2] Implement ComparisonService (for each aspect, run RetrievalService per offerId, normalise snippets, flag missing coverage with explicit null marker) at src/backend/MedInsuranceHelper.Api/Services/ComparisonService.cs
+- [X] T026 [US2] Add CompareComponent in Angular (side-by-side table layout, missing-data badge, per-cell citation links) at src/frontend/src/app/compare/compare.component.ts and compare.component.html
 
 **Checkpoint**: User Story 2 functional — user can compare any aspect across at least two insurers with per-offer citations and clear missing-data indication.
 
@@ -87,9 +87,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T028 [P] [US3] Implement RecommendController (POST /api/recommend — accepts free-text criteria, returns ranked offers with reason + citations) at src/backend/MedInsuranceHelper.Api/Controllers/RecommendController.cs
-- [ ] T029 [US3] Implement RecommendationService (run RetrievalService for each offer vs criteria, score relevance, sort and format with closest-match fallback) at src/backend/MedInsuranceHelper.Api/Services/RecommendationService.cs
-- [ ] T030 [US3] Add RecommendComponent in Angular (criteria input form, recommendation result card with ranked offers and citation list) at src/frontend/src/app/recommend/recommend.component.ts and recommend.component.html
+- [X] T028 [P] [US3] Implement RecommendController (POST /api/recommend — accepts free-text criteria, returns ranked offers with reason + citations) at src/backend/MedInsuranceHelper.Api/Controllers/RecommendController.cs
+- [X] T029 [US3] Implement RecommendationService (run RetrievalService for each offer vs criteria, score relevance, sort and format with closest-match fallback) at src/backend/MedInsuranceHelper.Api/Services/RecommendationService.cs
+- [X] T030 [US3] Add RecommendComponent in Angular (criteria input form, recommendation result card with ranked offers and citation list) at src/frontend/src/app/recommend/recommend.component.ts and recommend.component.html
 
 **Checkpoint**: User Story 3 functional — user receives a personalised recommendation with cited reasoning within 3 conversation turns.
 
@@ -103,12 +103,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T031 [P] [US4] Create ConversationSession and Message domain models (session id, started_at, last_active_at; message role enum, text, citations array) at src/backend/MedInsuranceHelper.Api/Models/ConversationSession.cs and src/backend/MedInsuranceHelper.Api/Models/Message.cs
-- [ ] T032 [US4] Implement SessionService (in-memory store: create session, append message, retrieve history) at src/backend/MedInsuranceHelper.Api/Services/SessionService.cs
-- [ ] T033 [US4] Implement SessionController (POST /api/session — create or retrieve session, return sessionId) at src/backend/MedInsuranceHelper.Api/Controllers/SessionController.cs
-- [ ] T034 [US4] Update LLMPipelineService to accept conversation history parameter and include prior turns in Foundry prompt for context-aware responses at src/backend/MedInsuranceHelper.Api/Services/LLMPipelineService.cs
-- [ ] T035 [US4] Implement SessionService on frontend (persist sessionId in memory, pass it with every chat request) at src/frontend/src/app/chat/session.service.ts
-- [ ] T036 [US4] Update ChatComponent to display conversation history and pass sessionId on all requests at src/frontend/src/app/chat/chat.component.ts
+- [X] T031 [P] [US4] Create ConversationSession and Message domain models (session id, started_at, last_active_at; message role enum, text, citations array) at src/backend/MedInsuranceHelper.Api/Models/ConversationSession.cs and src/backend/MedInsuranceHelper.Api/Models/Message.cs
+- [X] T032 [US4] Implement SessionService (in-memory store: create session, append message, retrieve history) at src/backend/MedInsuranceHelper.Api/Services/SessionService.cs
+- [X] T033 [US4] Implement SessionController (POST /api/session — create or retrieve session, return sessionId) at src/backend/MedInsuranceHelper.Api/Controllers/SessionController.cs
+- [X] T034 [US4] Update LLMPipelineService to accept conversation history parameter and include prior turns in Foundry prompt for context-aware responses at src/backend/MedInsuranceHelper.Api/Services/LLMPipelineService.cs
+- [X] T035 [US4] Implement SessionService on frontend (persist sessionId in memory, pass it with every chat request) at src/frontend/src/app/chat/session.service.ts
+- [X] T036 [US4] Update ChatComponent to display conversation history and pass sessionId on all requests at src/frontend/src/app/chat/chat.component.ts
 
 **Checkpoint**: User Story 4 functional — follow-up questions within the same session are correctly resolved in context.
 
@@ -118,12 +118,13 @@
 
 **Purpose**: Error handling, observability, sample data, CI, and documentation
 
-- [ ] T037 [P] Add sample PDF set (at least 2 insurers) to docs/samples/ and loader script scripts/load-samples.ps1 that ingests and processes them via the API
-- [ ] T038 [P] Add GitHub Actions CI workflow (build .NET backend, ng build frontend, fail on errors) at .github/workflows/ci.yml
-- [ ] T039 Add global error handling middleware and structured logging (Serilog or ILogger) across all backend controllers and services at src/backend/MedInsuranceHelper.Api/Middleware/ErrorHandlingMiddleware.cs
-- [ ] T040 Add ingestion-failure notification path: log unreadable/failed PDFs with clear operator message in ProcessingWorker at src/backend/MedInsuranceHelper.Api/Workers/ProcessingWorker.cs
-- [ ] T041 Write integration demo checklist (upload PDF → ingest → process → query → compare → recommend → multi-turn) at specs/001-insurance-offer-chatbot/checklists/integration.md
-- [ ] T042 Update README with architecture diagram description, tech stack, and local run steps at README.md
+- [X] T037 [P] Add sample PDF set (at least 2 insurers) to docs/samples/ and loader script scripts/load-samples.ps1 that ingests and processes them via the API
+- [X] T038 [P] Add GitHub Actions CI workflow (build .NET backend, ng build frontend, fail on errors) at .github/workflows/ci.yml
+- [X] T039 Add global error handling middleware and structured logging (Serilog or ILogger) across all backend controllers and services at src/backend/MedInsuranceHelper.Api/Middleware/ErrorHandlingMiddleware.cs
+- [X] T040 Add ingestion-failure notification path: log unreadable/failed PDFs with clear operator message in ProcessingWorker at src/backend/MedInsuranceHelper.Api/Workers/ProcessingWorker.cs
+- [X] T043 Add heuristic sensitive-data detection in PdfIngestionService: after text extraction, scan for PII-like patterns (NIN/SSN, IBAN, date-of-birth, credit card regex); emit a structured WARNING log entry with offerId and match summary (no content dumped) so operator can review before proceeding — at src/backend/MedInsuranceHelper.Api/Services/PdfIngestionService.cs
+- [X] T041 Write integration demo checklist (upload PDF → ingest → process → query → compare → recommend → multi-turn) at specs/001-insurance-offer-chatbot/checklists/integration.md
+- [X] T042 Update README with architecture diagram description, tech stack, and local run steps at README.md
 
 ---
 
@@ -216,7 +217,7 @@ With multiple developers available after Phase 2:
 
 ## Summary
 
-- **Total tasks**: 42
+- **Total tasks**: 43
 - **Tasks per story**: US1 = 8 (T016–T023), US2 = 3 (T024–T026), US3 = 3 (T028–T030), US4 = 6 (T031–T036)
 - **Setup tasks**: 5 (T001–T005)
 - **Foundational tasks**: 10 (T006–T015)

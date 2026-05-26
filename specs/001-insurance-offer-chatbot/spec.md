@@ -120,6 +120,16 @@ A user asks follow-up questions within the same chat session, referencing earlie
 
 ---
 
+## Data Privacy & Sensitive Content Policy *(mandatory)*
+
+> ⚠️ **Operator Warning**: Only ingest publicly available or fully anonymised insurance policy documents. Do **not** upload files that contain personally identifiable information (PII) such as names, NIN/SSN, dates of birth, medical records, or financial account details. Redact or exclude any such content before ingestion.
+
+- The ingestion pipeline MUST log a warning when heuristic checks flag potential sensitive content (e.g., patterns resembling NIN, date-of-birth, credit card, or IBAN formats in extracted text). No automatic blocking is required for this study project, but the operator must be notified so they can review.
+- Sample PDFs added to `docs/samples/` MUST be fully anonymised dummy data — real personal or patient data MUST NOT be committed to the repository.
+- This policy aligns with the project constitution: "Avoid ingesting sensitive personal data. Redact or exclude sensitive information before ingestion."
+
+---
+
 ## Assumptions
 
 - Users interact via a web-based chat interface; mobile support is out of scope for v1.

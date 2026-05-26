@@ -38,6 +38,7 @@ ScaffoldingReadMe.txt
 
 # dotenv environment variables file
 .env
+.env.local
 
 # Others
 ~$*
@@ -58,3 +59,19 @@ nunit-*.xml
 
 # Agents
 #.github/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+*.js.map
+
+# Local vector store data (generated at runtime)
+data/vectors/
+
+# Azurite data
+data/azurite/
+
+# OS
+.DS_Store
+Thumbs.db

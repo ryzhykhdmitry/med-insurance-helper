@@ -1,0 +1,61 @@
+<div class="chat-container">
+  <div class="chat-header">
+    <h2>🏥 Medical Insurance Assistant</h2>
+    <button class="btn-clear" (click)="clearChat()" title="New conversation">New Chat</button>
+  </div>
+
+  <!-- Message list -->
+  <div class="message-list">
+    <div
+      *ngFor="let msg of messages"
+      class="message"
+      [class.user-message]="msg.role === 'user'"
+      [class.assistant-message]="msg.role === 'assistant'"
+    >
+      <div class="message-role">{{ msg.role === 'user' ? 'You' : 'Assistant' }}</div>
+      <div class="message-text">
+        {{ msg.text }}<span *ngIf="msg.isStreaming" class="cursor">▌</span>
+      </div>
+
+      <!-- Citation display (T023) -->
+      <div *ngIf="msg.citations && msg.citations.length > 0" class="citations">
+        <div class="citations-label">Sources:</div>
+        <div *ngFor="let c of msg.citations; let i = index" class="citation-item">
+          <span class="citation-badge">{{ i + 1 }}</span>
+          <span class="citation-doc">{{ c.documentId }}</span>
+          <span class="citation-page">{{ c.pageRef }}</span>
+          <span class="citation-excerpt" [title]="c.excerpt">
+            {{ c.excerpt | slice:0:120 }}{{ c.excerpt.length > 120 ? '…' : '' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div *ngIf="isLoading && messages[messages.length - 1]?.isStreaming === false" class="loading">
+      <span class="dot-flashing"></span>
+    </div>
+
+    <div *ngIf="messages.length === 0" class="empty-state">
+      Ask a question about an insurance offer to get started.
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="input-area">
+    <textarea
+      [(ngModel)]="inputText"
+      (keydown)="onKeydown($event)"
+      placeholder="Ask about insurance coverage, benefits, compare offers…"
+      rows="2"
+      [disabled]="isLoading"
+    ></textarea>
+    <button
+      class="btn-send"
+      (click)="send()"
+      [disabled]="isLoading || !inputText.trim()"
+    >
+      {{ isLoading ? '…' : 'Send' }}
+    </button>
+  </div>
+</div>
