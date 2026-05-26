@@ -13,31 +13,33 @@
       [class.assistant-message]="msg.role === 'assistant'"
     >
       <div class="message-role">{{ msg.role === 'user' ? 'You' : 'Assistant' }}</div>
-      <div class="message-text">
-        {{ msg.text }}<span *ngIf="msg.isStreaming" class="cursor">▌</span>
+
+      <!-- Loading indicator while awaiting response -->
+      <div *ngIf="msg.isLoading" class="message-text">
+        <span class="cursor">▌</span>
       </div>
 
-      <!-- Citation display (T023) -->
-      <div *ngIf="msg.citations && msg.citations.length > 0" class="citations">
-        <div class="citations-label">Sources:</div>
-        <div *ngFor="let c of msg.citations; let i = index" class="citation-item">
-          <span class="citation-badge">{{ i + 1 }}</span>
-          <span class="citation-doc">{{ c.documentId }}</span>
-          <span class="citation-page">{{ c.pageRef }}</span>
-          <span class="citation-excerpt" [title]="c.excerpt">
-            {{ c.excerpt | slice:0:120 }}{{ c.excerpt.length > 120 ? '…' : '' }}
-          </span>
+      <!-- Multi-section response (comparison / recommendation / answer / clarification) -->
+      <ng-container *ngIf="!msg.isLoading && msg.sections && msg.sections.length > 0">
+        <div *ngFor="let section of msg.sections" class="response-section" [attr.data-type]="section.type">
+          <div class="section-label">{{ sectionLabel(section.type) }}</div>
+          <div class="section-content">{{ section.content }}</div>
         </div>
+      </ng-container>
+
+      <!-- Fallback plain text (user messages and legacy) -->
+      <div *ngIf="!msg.isLoading && (!msg.sections || msg.sections.length === 0)" class="message-text">
+        {{ msg.text }}
       </div>
     </div>
 
-    <!-- Loading indicator -->
-    <div *ngIf="isLoading && messages[messages.length - 1]?.isStreaming === false" class="loading">
+    <!-- Global loading spinner (before placeholder is added) -->
+    <div *ngIf="isLoading && messages[messages.length - 1]?.isLoading === false" class="loading">
       <span class="dot-flashing"></span>
     </div>
 
     <div *ngIf="messages.length === 0" class="empty-state">
-      Ask a question about an insurance offer to get started.
+      Ask anything about insurance — compare plans, get a recommendation, or ask a general question.
     </div>
   </div>
 
@@ -46,7 +48,7 @@
     <textarea
       [(ngModel)]="inputText"
       (keydown)="onKeydown($event)"
-      placeholder="Ask about insurance coverage, benefits, compare offers…"
+      placeholder="e.g. Compare Alpha and Gamma plans, or recommend a plan for a family of 4…"
       rows="2"
       [disabled]="isLoading"
     ></textarea>

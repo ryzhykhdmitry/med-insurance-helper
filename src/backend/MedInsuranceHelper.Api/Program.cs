@@ -53,6 +53,8 @@ try
     builder.Services.AddScoped<ILLMPipelineService, LLMPipelineService>();
     builder.Services.AddScoped<IComparisonService, ComparisonService>();
     builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+    builder.Services.AddScoped<IIntentDetectionService, IntentDetectionService>();
+    builder.Services.AddScoped<IChatOrchestrationService, ChatOrchestrationService>();
 
     var app = builder.Build();
 

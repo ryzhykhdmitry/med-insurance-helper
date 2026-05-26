@@ -42,4 +42,11 @@ public class AppSettings
 
     /// <summary>Application environment (Development / Staging / Production).</summary>
     public string AppEnv { get; set; } = "Development";
+
+    /// <summary>
+    /// Policy for handling single-plan comparison requests.
+    /// "clarify" (default): ask the user for a second plan name.
+    /// "recommend": auto-convert to a recommendation request.
+    /// </summary>
+    public string SinglePlanComparePolicy { get; set; } = "clarify";
 }

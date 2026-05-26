@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 export interface Citation {
   documentId: string;
@@ -12,59 +13,41 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   citations?: Citation[];
-  isStreaming?: boolean;
+  sections?: ResponseSection[];
+  isLoading?: boolean;
 }
 
-export interface StreamEvent {
-  type: 'token' | 'citations' | 'done' | 'error';
-  data: string;
+export interface ResponseSection {
+  type: 'comparison' | 'recommendation' | 'answer' | 'clarification' | string;
+  content: string;
+  payload?: unknown;
+}
+
+export interface ResponseArtifact {
+  sessionId: string;
+  sections: ResponseSection[];
+  errors: string[];
+}
+
+export interface ChatApiResponse {
+  sessionId: string;
+  responseArtifact: ResponseArtifact;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private readonly baseUrl = 'http://localhost:5000/api';
 
+  constructor(private http: HttpClient) {}
+
   /**
-   * Opens an SSE connection to /api/stream and emits parsed events.
-   * Caller is responsible for closing the returned EventSource via the teardown Subject.
+   * Sends a message to POST /api/chat and returns the structured response.
    */
-  streamResponse(
-    query: string,
-    topK = 5,
-    sessionId?: string
-  ): { events$: Observable<StreamEvent>; close: () => void } {
-    const subject = new Subject<StreamEvent>();
-    let params = `query=${encodeURIComponent(query)}&topK=${topK}`;
-    if (sessionId) params += `&sessionId=${encodeURIComponent(sessionId)}`;
-
-    const es = new EventSource(`${this.baseUrl}/stream?${params}`);
-
-    es.addEventListener('token', (e: MessageEvent) => {
-      subject.next({ type: 'token', data: (e as MessageEvent).data });
-    });
-
-    es.addEventListener('citations', (e: MessageEvent) => {
-      subject.next({ type: 'citations', data: (e as MessageEvent).data });
-    });
-
-    es.addEventListener('done', () => {
-      subject.next({ type: 'done', data: '' });
-      subject.complete();
-      es.close();
-    });
-
-    es.onerror = () => {
-      subject.next({ type: 'error', data: 'Stream connection error.' });
-      subject.complete();
-      es.close();
+  sendMessage(text: string, sessionId?: string): Observable<ChatApiResponse> {
+    const body = {
+      sessionId: sessionId ?? null,
+      message: { text }
     };
-
-    return {
-      events$: subject.asObservable(),
-      close: () => {
-        es.close();
-        subject.complete();
-      }
-    };
+    return this.http.post<ChatApiResponse>(`${this.baseUrl}/chat`, body);
   }
 }

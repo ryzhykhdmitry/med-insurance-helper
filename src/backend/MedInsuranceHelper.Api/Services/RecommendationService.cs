@@ -1,5 +1,5 @@
 using MedInsuranceHelper.Api.Configuration;
-using MedInsuranceHelper.Api.Controllers;
+using MedInsuranceHelper.Api.Models;
 using MedInsuranceHelper.Api.Services.VectorStore;
 using Microsoft.Extensions.Options;
 
