@@ -24,9 +24,10 @@
 
 ### Infrastructure Provisioning Scripts
 
-- [ ] T001 [P] [US1] Create `scripts/setup-blob-storage.ps1` to provision Azure Blob Storage container for PDFs
-- [ ] T002 [P] [US1] Create `scripts/setup-search-indexer.ps1` to configure Azure AI Search with indexer, skillset, and vector index
-- [ ] T003 [P] [US1] Create `scripts/setup-foundry-project.ps1` to configure Azure AI Foundry RAG endpoint connected to search index
+- [ ] T001 [P] [US1] Create `scripts/setup-blob-storage.ps1` to provision Azure Blob Storage container for PDFs with idempotent resource checks (skip if container already exists)
+- [ ] T002 [P] [US1] Create `scripts/setup-search-indexer.ps1` to configure Azure AI Search with indexer, skillset, and vector index with idempotent resource checks (skip if resources already exist)
+- [ ] T002a [US1] Verify Azure AI Search indexer automatic retry behavior and execution history tracking in Azure Portal after T002 completes
+- [ ] T003 [P] [US1] Create `scripts/setup-foundry-project.ps1` to configure Azure AI Foundry RAG endpoint connected to search index with idempotent resource checks (skip if project already configured)
 - [ ] T004 [US1] Create `scripts/README.md` documenting script execution order and required Azure CLI commands
 
 **Checkpoint**: Azure resources provisioned and ready for document uploads
@@ -42,8 +43,8 @@
 ### Data Models
 
 - [ ] T005 [P] Add `ExpiresAt` property to existing `src/backend/MedInsuranceHelper.Api/Models/ConversationSession.cs`
-- [ ] T006 [P] Add optional `SourceDocuments` property to existing `src/backend/MedInsuranceHelper.Api/Models/Message.cs`
-- [ ] T007 [P] Create `src/backend/MedInsuranceHelper.Api/Models/SourceCitation.cs` DTO for Foundry response citations
+- [ ] T006 [P] Add optional `SourceCitations` property (List<SourceCitation>) to existing `src/backend/MedInsuranceHelper.Api/Models/Message.cs`
+- [ ] T007 [P] Create `src/backend/MedInsuranceHelper.Api/Models/SourceCitation.cs` DTO for Foundry response citations (DocumentId, Content, FileName, PageNumber, ChunkIndex, Score)
 
 ### Configuration
 
@@ -123,8 +124,8 @@
 ### Manual Testing (per quickstart.md)
 
 - [ ] T024 Run infrastructure setup scripts and verify resources in Azure Portal
-- [ ] T025 Upload sample PDF (docs/samples/alpha-health-plan.txt → convert or use existing PDF) to blob storage via Azure CLI
-- [ ] T026 Wait for Azure AI Search indexer to process document (check indexer execution history in Portal)
+- [ ] T025 Upload sample PDF to blob storage via Azure CLI (note: sample files in docs/samples/ are .txt format - either convert to PDF first or use actual PDF files if available)
+- [ ] T026 Wait for Azure AI Search indexer to process document (check indexer execution history in Portal for successful completion and retry attempts if any failures occur)
 - [ ] T027 Start backend API and send test chat message: "What is the deductible for Alpha Health Plan?"
 - [ ] T028 Verify response includes answer with source citations and session expiration time
 - [ ] T029 Send follow-up message with same sessionId and verify conversation context maintained
@@ -145,8 +146,8 @@
 
 ### Code Cleanup
 
-- [ ] T033 Remove unused document processing models if any exist (DocumentChunk, ProcessingStatus, etc.)
-- [ ] T034 Remove any existing embedding or chunking services that are no longer needed (processing now handled by Azure)
+- [ ] T033 Remove backend processing services no longer needed (ChunkingService, EmbeddingService, PdfIngestionService) since processing is now handled by Azure AI Search
+- [ ] T034 Remove any unused document processing models if any exist (DocumentChunk, ProcessingStatus, etc.) that are not referenced by remaining code
 
 ---
 
@@ -164,7 +165,7 @@
 
 ### Parallel Opportunities
 
-- **Phase 1**: All infrastructure scripts (T001, T002, T003) can be created in parallel
+- **Phase 1**: Infrastructure scripts T001, T002, T003 can be created in parallel; T002a runs after T002 completes
 - **Phase 2**: All model updates (T005, T006, T007) can be done in parallel
 - **Phase 5**: Session endpoints (T022, T023) can be implemented in parallel after T021 is complete
 - **Phase 6**: Some manual tests can run concurrently if using different sessions
@@ -181,7 +182,7 @@ T005-T007 (Models) → T010-T012 (Session Logic) → T020-T021 (Chat Endpoint) �
 
 ### Within Each User Story
 
-- **US1 (Infrastructure)**: Scripts are independent, but execute in order: Blob Storage → AI Search → Foundry
+- **US1 (Infrastructure)**: Scripts are independent and idempotent, but execute in order: Blob Storage (T001) → AI Search (T002) → Verify indexer (T002a) → Foundry (T003)
 - **US3 (Chat)**: Models → Services → Controllers → Testing
 
 ---

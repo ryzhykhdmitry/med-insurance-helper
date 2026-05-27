@@ -323,22 +323,8 @@ npm start
 4. Ask: "What are the coverage percentages for each plan?"
 5. **Expected**:
    - Response includes coverage data from multiple documents
-   - `sourceDocuments` array lists chunks with file names and page numbers
+   - `sourceCitations` array lists chunks with file names and page numbers
    - Search relevance scores included (0.0 - 1.0)
-
----
-
-### Test 5: Document Comparison
-
-**Objective**: Verify multi-document comparison API.
-
-1. Ensure 3 documents indexed (Alpha, Beta, Gamma plans)
-2. Call `POST /api/search/compare` with all 3 document paths
-3. Criteria: `["deductible", "premium", "coverage"]`
-4. **Expected**:
-   - Structured comparison table returned
-   - Summary highlights key differences
-   - Generation completes within 10 seconds
 
 ---
 

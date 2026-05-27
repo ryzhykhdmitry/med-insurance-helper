@@ -10,9 +10,9 @@ This document defines the data entities and relationships for the chat system. D
 
 ## Core Entities
 
-### 1. SearchResult (Read-Only from Azure AI Search)
+### 1. SourceCitation (Read-Only from Azure AI Search)
 
-**Purpose**: Represents a document chunk retrieved from the search index.
+**Purpose**: Represents a document chunk retrieved from the search index and cited in responses.
 
 **Properties** (Mapped from search index):
 
@@ -72,14 +72,74 @@ This document defines the data entities and relationships for the chat system. D
 | `Role` | `MessageRole` (enum) | Sender: User, Assistant | User, Assistant |
 | `Content` | `string` | Message text | Max 2000 chars for user, 1500 for assistant |
 | `Timestamp` | `DateTime` (UTC) | When message was created | Immutable |
-| `SourceDocuments` | `List<SearchResult>?` | Documents cited in response | Nullable, assistant messages only |
+| `SourceCitations` | `List<SourceCitation>?` | Document chunks cited in response | Nullable, assistant messages only |
 
 **Relationships**:
 - Many Messages → One ConversationSession (N:1, in-memory)
 
 **Notes**:
 - System messages (prompts) not stored in conversation history
-- `SourceDocuments` enables citation tracking for response verification
+- `SourceCitations` enables citation tracking for response verification
+
+---
+
+### 4. FoundryRagRequest
+
+**Purpose**: Represents a request sent to Azure AI Foundry RAG endpoint for retrieval-augmented generation.
+
+**Properties**:
+
+| Property | Type | Description | Constraints |
+|----------|------|-------------|-------------|
+| `UserQuery` | `string` | Current user question | Required, max 2000 chars |
+| `ConversationHistory` | `List<Message>` | Previous messages for context | Max 20 messages |
+| `RetrievalParameters` | `RetrievalConfig` | Search configuration | See RetrievalConfig below |
+
+**RetrievalConfig Properties**:
+
+| Property | Type | Description | Default |
+|----------|------|-------------|---------|
+| `TopK` | `int` | Number of chunks to retrieve | 5 |
+| `SearchMode` | `string` | Search type: "hybrid", "vector", "text" | "hybrid" |
+| `MinRelevanceScore` | `double?` | Minimum relevance threshold | null |
+
+**Notes**:
+- DTO constructed by backend before forwarding to Foundry
+- Conversation history enables multi-turn context
+- Foundry handles embedding generation and search execution
+
+---
+
+### 5. FoundryRagResponse
+
+**Purpose**: Represents the response returned from Azure AI Foundry RAG endpoint after retrieval-augmented generation.
+
+**Properties**:
+
+| Property | Type | Description | Constraints |
+|----------|------|-------------|-------------|
+| `GeneratedAnswer` | `string` | LLM-generated response text | Max 1500 chars (truncated if longer) |
+| `SourceCitations` | `List<SourceCitation>` | Retrieved document chunks used in generation | 0-5 items (based on TopK) |
+| `TokenUsage` | `TokenMetadata?` | Token consumption details | Nullable |
+| `ResponseTimestamp` | `DateTime` (UTC) | When response was generated | Immutable |
+
+**TokenMetadata Properties**:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `PromptTokens` | `int` | Tokens in prompt (including retrieved context) |
+| `CompletionTokens` | `int` | Tokens in generated response |
+| `TotalTokens` | `int` | Sum of prompt + completion tokens |
+
+**Relationships**:
+- One FoundryRagResponse → Many SourceCitation citations (1:N)
+- FoundryRagResponse → FoundryRagRequest (1:1, request-response pair)
+
+**Notes**:
+- DTO mapped from Foundry API response by backend
+- `SourceCitations` populated by Foundry with relevance scores
+- `TokenUsage` useful for monitoring costs and performance
+- Backend appends this response to conversation session as Message with role=Assistant
 
 ---
 
@@ -104,17 +164,31 @@ Azure AI Search Index (Azure-managed)
   ├── Chunks (text content + embeddings)
   └── Metadata (filename, page numbers)
         ↑
-        │ (Backend queries via Azure.Search.Documents SDK)
+        │ (Foundry queries during RAG)
         │
-        └── SearchResult (DTO, read-only)
-
+        └── SourceCitation (DTO, read-only)
+                  ↓
+            FoundryRagResponse
+                  ├── GeneratedAnswer
+                  ├── SourceCitations (List<SourceCitation>)
+                  └── TokenUsage
+                        ↑
+                        │ (Backend forwards)
+                        │
+                  FoundryRagRequest
+                  ├── UserQuery
+                  ├── ConversationHistory
+                  └── RetrievalParameters
+                        ↑
+                        │ (Backend constructs)
+                        │
 ConversationSession (in-memory, backend-managed)
   ├── SessionId
   ├── LastActiveAt (sliding expiration: +30 min)
   └── Messages (N, in-memory list)
         ├── Role (User | Assistant)
         ├── Content
-        └── SourceDocuments (List<SearchResult>)
+        └── SourceCitations (List<SourceCitation>)
 
 [Background Cleanup Worker]
   └── Scans sessions every 10 min, removes if ExpiresAt < UtcNow
@@ -124,7 +198,7 @@ ConversationSession (in-memory, backend-managed)
 
 ## Data Validation Rules
 
-### SearchResult
+### SourceCitation
 - Read-only; validation performed by Azure AI Search
 - Backend maps but does not modify
 
@@ -136,7 +210,18 @@ ConversationSession (in-memory, backend-managed)
 ### Message
 - `Content`: Must be non-empty
 - `Role`: User messages precede Assistant messages (alternating pattern)
-- `SourceDocuments`: Only set for Assistant messages
+- `SourceCitations`: Only set for Assistant messages
+
+### FoundryRagRequest
+- `UserQuery`: Must be non-empty, max 2000 characters
+- `ConversationHistory`: Max 20 messages (truncate oldest if exceeded)
+- `RetrievalParameters.TopK`: Must be between 1 and 10
+- `RetrievalParameters.SearchMode`: Must be one of: "hybrid", "vector", "text"
+
+### FoundryRagResponse
+- `GeneratedAnswer`: May be empty if no relevant information found
+- `SourceCitations`: Empty list is valid (no relevant documents found)
+- `TokenUsage`: Optional; may be null if not provided by Foundry
 
 ---
 

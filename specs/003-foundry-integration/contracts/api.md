@@ -55,7 +55,7 @@ X-Session-Id: {optional-session-guid}
 {
   "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "message": "The Alpha Health Plan has a $1,500 annual deductible for individual coverage and $3,000 for family coverage.",
-  "sourceDocuments": [
+  "sourceCitations": [
     {
       "documentId": "/insurance-docs/alpha-health-plan.pdf",
       "fileName": "alpha-health-plan.pdf",
@@ -193,7 +193,7 @@ All error responses follow this structure:
 
 1. **Chat Interface**: Use existing chat component
    - Send messages to `/api/chat` with session ID
-   - Display `sourceDocuments` as citations with relevance scores
+   - Display `sourceCitations` as citations with relevance scores
    - Show `expiresAt` countdown in UI
    - Handle `404 Session Expired` by creating new session
 
