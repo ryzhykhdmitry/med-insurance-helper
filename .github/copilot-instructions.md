@@ -2,6 +2,6 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at:
 
-specs/002-simplify-chat-flow/plan.md
+specs/003-foundry-integration/plan.md
 
 <!-- SPECKIT END -->

@@ -6,7 +6,17 @@
 
 **Status**: Draft
 
-**Input**: User description: "System provisions Azure Blob Storage and Azure AI Foundry resources using scripts. PDF documents stored in Blob Storage are ingested and processed to enable retrieval. Azure AI Foundry is responsible for: extracting and chunking document content, generating embeddings, indexing vectors for search, orchestrating chat requests. An existing .NET API sends user messages to Foundry and returns responses to the existing UI. The system supports question answering, summarization, and comparison across documents via natural language. Focus on a simple, minimal implementation suitable for a learning project. Avoid unnecessary infrastructure components or over-engineering."
+**Input**: User description: "System provisions Azure Blob Storage, Azure AI Search, and Azure AI Foundry resources using scripts. PDF documents stored in Blob Storage are automatically processed by Azure AI Search Indexer + Skillset (extraction, chunking, embedding, indexing). Azure AI Foundry RAG endpoint orchestrates retrieval-augmented generation: it generates query embeddings, searches the vector index, retrieves relevant chunks, assembles prompts, and calls the LLM for responses. An existing .NET API forwards user messages to Foundry's RAG endpoint and returns responses to the existing UI. The system supports question answering, summarization, and comparison across documents via natural language. Focus on a simple, minimal implementation suitable for a learning project with maximum use of Azure-managed services."
+
+## Clarifications
+
+### Session 2026-05-27
+
+- Q: When users upload documents, how should the system uniquely identify each document to prevent duplicates and enable updates? → A: By blob path - Azure AI Search Indexer uses the blob's metadata_storage_path as the document identifier; re-uploading to the same path updates the existing index entry
+- Q: How do users upload documents into the system for processing? → A: Manual file copy to cloud storage - users directly upload files to blob storage using Azure tools (Portal, Storage Explorer, CLI)
+- Q: How should the system know when to start processing a newly added document in cloud storage? → A: Automatic monitoring - Azure AI Search Indexer monitors the blob container on a schedule (5-15 min intervals) or via change detection; no webhooks or Event Grid needed
+- Q: When maintaining conversation context for multi-turn chat interactions, what is the scope and lifecycle of a conversation session? → A: Time-based expiration - context maintained for fixed duration (30 minutes of inactivity)
+- Q: When document processing fails (e.g., extraction error, format issue), how should the system handle retry attempts and final failure states? → A: Azure AI Search Indexer handles retries automatically with built-in exponential backoff; indexer execution history tracks failures
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -28,19 +38,23 @@ System administrators need to set up cloud infrastructure for document processin
 
 ### User Story 2 - Document Upload and Processing (Priority: P2)
 
-Users need to upload insurance plan documents to the system for processing. The system automatically processes these documents, extracts content, and makes them searchable for answering questions.
+Users need to add insurance plan documents to cloud storage for processing. The system automatically detects new documents, processes them, extracts content, and makes them searchable for answering questions.
 
 **Why this priority**: This is the core document processing pipeline. Without successfully processed documents, the question answering and retrieval features cannot provide meaningful responses.
 
-**Independent Test**: Can be fully tested by uploading a document and verifying it becomes searchable and can be used to answer questions. Delivers a working document processing capability.
+**Independent Test**: Can be fully tested by adding a document to cloud storage and verifying it becomes searchable and can be used to answer questions. Delivers a working document processing capability.
 
 **Acceptance Scenarios**:
 
-1. **Given** infrastructure is set up, **When** user uploads a document, **Then** document is stored securely in cloud storage
-2. **Given** document is stored, **When** processing runs, **Then** document content is extracted and organized into logical segments
-3. **Given** document is organized, **When** indexing completes, **Then** document content is searchable and can be retrieved by relevant queries
-4. **Given** invalid or corrupted document is uploaded, **When** processing attempts to handle it, **Then** system logs error and notifies user of failure
-5. **Given** multiple documents are uploaded, **When** processing completes, **Then** all documents are independently searchable
+1. **Given** infrastructure is set up, **When** user adds a document to cloud storage using Azure tools, **Then** document is stored securely with unique blob path identifier
+2. **Given** document is stored, **When** Azure AI Search Indexer runs (scheduled or triggered), **Then** indexer detects new document and executes skillset pipeline automatically
+3. **Given** skillset executes, **When** processing completes, **Then** document content is extracted, chunked, embedded, and indexed in vector search index
+4. **Given** document is indexed, **When** indexing completes, **Then** document content is searchable and can be retrieved by Azure AI Foundry RAG endpoint
+5. **Given** document processing encounters transient error, **When** indexer retry logic triggers, **Then** indexer automatically retries with exponential backoff
+6. **Given** document processing fails multiple times, **When** indexer exhausts retries, **Then** indexer execution history shows failure status with error details
+7. **Given** invalid or corrupted document is added, **When** indexer processes upload, **Then** indexer marks document processing as failed in execution history
+8. **Given** multiple documents are added, **When** indexer processes all documents, **Then** all successfully processed documents are independently searchable
+9. **Given** document with same blob path is re-uploaded, **When** indexer processes upload, **Then** indexer updates existing index entry rather than creating duplicate
 
 ---
 
@@ -54,10 +68,10 @@ Users need to ask natural language questions about uploaded documents and receiv
 
 **Acceptance Scenarios**:
 
-1. **Given** documents are processed and searchable, **When** user asks a question via chat interface, **Then** system returns relevant answer with information from documents
-2. **Given** user asks question about specific document content, **When** system processes request, **Then** response includes information from most relevant parts of documents
-3. **Given** user asks question with no relevant content, **When** system processes request, **Then** system indicates no relevant information was found
-4. **Given** user asks follow-up question, **When** system processes request, **Then** system maintains conversation context for coherent responses
+1. **Given** documents are processed and searchable, **When** user asks a question via chat interface, **Then** backend forwards request to Azure AI Foundry RAG endpoint which returns relevant answer with source citations
+2. **Given** user asks question about specific document content, **When** Foundry RAG endpoint processes request, **Then** Foundry generates query embedding, searches vector index, retrieves relevant chunks, and generates contextualized response
+3. **Given** user asks question with no relevant content, **When** Foundry RAG endpoint processes request, **Then** Foundry indicates no relevant information was found in the indexed documents
+4. **Given** user asks follow-up question, **When** backend forwards request with conversation history, **Then** Foundry maintains conversation context for coherent responses
 
 ---
 
@@ -95,56 +109,73 @@ Users need to compare content across multiple documents to identify differences,
 
 ### Edge Cases
 
-- What happens when document is too large or has unsupported format?
-- How does system handle concurrent document uploads during processing?
-- What happens when cloud AI service is temporarily unavailable?
-- How does system handle queries with no processed documents available?
-- What happens when document processing fails for specific content sections?
-- How does system behave when cloud storage connection is lost during upload?
-- What happens when user asks questions in languages other than English?
-- How does system handle documents with images, tables, or complex layouts?
+- What happens when document is too large or has unsupported format? → Azure AI Search Indexer logs error in execution history; document not indexed
+- How does system handle concurrent document uploads during processing? → Indexer processes documents in batches based on schedule; handles concurrency automatically
+- What happens when Azure AI Foundry RAG endpoint is temporarily unavailable during chat? → Backend returns 503 Service Unavailable; user can retry
+- How does system handle queries with no processed documents available? → Foundry RAG endpoint returns response indicating no relevant information found
+- What happens when document processing fails for specific content sections but succeeds for others? → Indexer processes what it can; partial results indexed; errors logged in execution history
+- How does system behave when blob storage connection is lost during indexer run? → Indexer retries automatically with exponential backoff; execution history shows transient errors
+- What happens when user asks questions in languages other than English? → Foundry RAG endpoint processes query but may have reduced quality; English-trained models prioritized
+- How does system handle documents with images, tables, or complex layouts? → AI Search document cracking attempts extraction; quality varies by document complexity
+- What happens when conversation session expires while user is actively typing a question? → Next message submission creates new session; conversation history lost
+- How does system handle follow-up questions after session expiration? → Backend returns 404 Session Expired; frontend creates new session
+- What happens when indexer schedule delay causes processing lag? → Documents processed on next indexer run (5-15 min); manual trigger available for immediate processing
+- How does Foundry RAG handle queries when vector index is being updated? → Search service handles concurrent reads/writes; queries may see eventual consistency
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide automated setup scripts for cloud infrastructure provisioning
-- **FR-002**: System MUST provide automated setup scripts for AI service workspace configuration
-- **FR-003**: System MUST accept document uploads and store them securely in cloud storage
-- **FR-004**: System MUST extract text content from uploaded documents
-- **FR-005**: System MUST organize extracted document content into logical segments for efficient retrieval
-- **FR-006**: System MUST enable semantic search across processed document content
-- **FR-007**: System MUST accept natural language chat queries from users through existing application interface
-- **FR-008**: System MUST retrieve relevant document content based on query meaning and context
-- **FR-009**: System MUST generate contextual responses using retrieved document content
-- **FR-010**: System MUST return generated responses to existing user interface
-- **FR-011**: System MUST support question answering functionality across all processed documents
-- **FR-012**: System MUST support document summarization for individual documents
-- **FR-013**: System MUST support comparison of multiple documents based on user-specified criteria
-- **FR-014**: System MUST handle document processing failures gracefully and log errors
-- **FR-015**: System MUST maintain conversation context for multi-turn chat interactions
-- **FR-016**: System MUST integrate with existing application without requiring user interface changes
+- **FR-001**: System MUST provide automated setup scripts for cloud infrastructure provisioning (Blob Storage, AI Search, AI Foundry)
+- **FR-002**: System MUST configure Azure AI Search Indexer to monitor blob container for new documents
+- **FR-003**: System MUST configure Azure AI Search Skillset to process documents (extraction, chunking, embedding, indexing)
+- **FR-004**: Azure AI Search Indexer MUST automatically detect new documents via schedule or change detection
+- **FR-005**: Azure AI Search Skillset MUST extract text content from PDF documents
+- **FR-006**: Azure AI Search Skillset MUST organize extracted content into logical chunks (512-1024 tokens)
+- **FR-007**: Azure AI Search Skillset MUST generate embeddings for document chunks using Azure OpenAI
+- **FR-008**: Azure AI Search Indexer MUST populate vector search index with chunks and embeddings
+- **FR-009**: System MUST accept natural language chat queries from users through existing application interface
+- **FR-010**: Backend MUST forward chat queries to Azure AI Foundry RAG endpoint with conversation history
+- **FR-011**: Azure AI Foundry RAG endpoint MUST generate query embeddings
+- **FR-012**: Azure AI Foundry RAG endpoint MUST search vector index for relevant chunks (hybrid: vector + semantic)
+- **FR-013**: Azure AI Foundry RAG endpoint MUST retrieve top-K relevant document chunks
+- **FR-014**: Azure AI Foundry RAG endpoint MUST assemble prompt with retrieved context and conversation history
+- **FR-015**: Azure AI Foundry RAG endpoint MUST call Azure OpenAI LLM to generate contextualized response
+- **FR-016**: Azure AI Foundry RAG endpoint MUST return response with source citations (blob path, relevance scores)
+- **FR-017**: Backend MUST return Foundry response to existing user interface
+- **FR-018**: System MUST support question answering functionality across all indexed documents via Foundry RAG
+- **FR-019**: System MUST support document summarization by retrieving all chunks for a document and calling Foundry
+- **FR-020**: System MUST support comparison of multiple documents by retrieving chunks and calling Foundry with comparison prompt
+- **FR-021**: Azure AI Search Indexer MUST handle document processing failures with automatic retry and exponential backoff
+- **FR-022**: Azure AI Search Indexer execution history MUST track processing status and error details
+- **FR-023**: Backend MUST maintain conversation sessions in-memory with session ID, message history, timestamps
+- **FR-024**: Backend MUST expire conversation sessions after 30 minutes of user inactivity
+- **FR-025**: Backend MUST allow users to continue asking questions within active session without losing context
+- **FR-026**: Backend MUST run background cleanup worker to remove expired sessions every 10 minutes
+- **FR-027**: System MUST integrate with existing application without requiring user interface changes
 
 ### Key Entities
 
-- **Document**: Represents uploaded insurance plan documents; includes original file, storage location, processing status, and upload timestamp
-- **Document Section**: Represents a logical segment of document content; includes text content, position within document, parent document reference, and metadata
-- **Chat Query**: Represents user question submitted via interface; includes query text, conversation context, user session, and timestamp
-- **Chat Response**: Represents system-generated answer; includes response text, source document references, and generation metadata
-- **Comparison Analysis**: Represents analysis of multiple documents; includes compared documents, identified differences, common themes, and comparison criteria
+- **Chat Session**: Represents an active conversation context; includes session identifier (GUID), conversation history (up to 20 messages), creation timestamp, last activity timestamp, and expiration time (30 minutes after last activity). Maintained in-memory by backend.
+- **Chat Message**: Represents a single message in a conversation; includes message text, role (user/assistant), timestamp, and optional source document citations (from Foundry response)
+- **Source Citation**: Represents a document chunk that contributed to an answer; includes blob path, file name, chunk content excerpt, page number (if available), and relevance score. Returned by Azure AI Foundry RAG endpoint.
+- **Foundry RAG Request**: Represents a request to Azure AI Foundry RAG endpoint; includes user query, conversation history, retrieval parameters (top K chunks, search mode)
+- **Foundry RAG Response**: Represents response from Azure AI Foundry RAG endpoint; includes generated answer text, source citations array, token usage metadata
+
+**Note**: Document processing entities (Document, DocumentSection, embeddings, chunks) are managed entirely by Azure AI Search Indexer and are NOT tracked in backend code. Indexer execution history provides processing status.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Administrator can set up all required cloud resources in under 10 minutes using provided scripts
-- **SC-002**: System processes and makes searchable a typical insurance plan document (20-50 pages) in under 3 minutes
-- **SC-003**: Users receive answers to questions within 5 seconds of submitting query
-- **SC-004**: System successfully processes content from 95% of uploaded documents
-- **SC-005**: System retrieves relevant document sections for 90% of typical user questions
-- **SC-006**: Users can ask follow-up questions and system maintains conversation context across 5+ message exchanges
-- **SC-007**: Document summaries capture key information in under 500 words and are comprehensible to non-technical users
-- **SC-008**: Cross-document comparisons identify differences across 3+ documents and complete within 10 seconds
+- **SC-001**: Administrator can set up all required cloud resources (Blob Storage, AI Search, AI Foundry) in under 10 minutes using provided scripts
+- **SC-002**: Azure AI Search Indexer processes and indexes a typical insurance plan document (20-50 pages) in under 20 minutes from upload (including indexer schedule detection time)
+- **SC-003**: Users receive answers to questions within 5 seconds of submitting query (including Foundry RAG endpoint round-trip)
+- **SC-004**: Azure AI Search Indexer successfully processes content from 95% of uploaded documents
+- **SC-005**: Azure AI Foundry RAG endpoint retrieves relevant document chunks for 90% of typical user questions
+- **SC-006**: Users can ask follow-up questions and backend + Foundry maintain conversation context across 5+ message exchanges
+- **SC-007**: Document summaries (via Foundry) capture key information in under 500 words and are comprehensible to non-technical users
+- **SC-008**: Cross-document comparisons (via Foundry) identify differences across 3+ documents and complete within 10 seconds
 - **SC-009**: System handles at least 10 concurrent users without response time degradation beyond 20%
 
 ## Assumptions
@@ -152,22 +183,30 @@ Users need to compare content across multiple documents to identify differences,
 ### Technology Constraints
 
 - Cloud infrastructure MUST use Azure Blob Storage for document storage (existing project constraint)
-- AI processing MUST use Azure AI Foundry for document analysis and chat orchestration (existing project constraint)
+- Document processing MUST use Azure AI Search Indexer + Skillset for automatic extraction, chunking, and embedding (Azure-managed processing)
+- RAG orchestration MUST use Azure AI Foundry RAG endpoint for query embedding, search, context assembly, and LLM response generation (Azure-managed orchestration)
 - Application integration MUST work with existing .NET Web API backend (existing architecture)
+- Backend role is simplified to session management and forwarding requests to Foundry RAG endpoint
 - User interface is already implemented and supports chat interactions (no UI changes required)
 - Document format is primarily PDF (based on existing sample documents in project)
 
 ### Environment and Access
 
-- Users have access to Azure subscriptions with permissions to create required cloud resources
+- Users have access to Azure subscriptions with permissions to create required cloud resources (Blob Storage, AI Search, AI Foundry)
+- Users have access to Azure tools (Portal, Storage Explorer, or CLI) for uploading documents to blob storage
 - Users have stable internet connectivity for cloud service access
-- Azure AI Foundry includes built-in capabilities for document processing, semantic analysis, and chat orchestration
+- Azure AI Search Basic tier or higher supports indexers, skillsets, and vector search
+- Azure AI Foundry project is configured with RAG endpoint connected to AI Search vector index
+- Azure OpenAI models are deployed in Foundry project (text-embedding-ada-002, gpt-35-turbo or gpt-4)
 
 ### Scope Boundaries
 
 - Document corpus is relatively small (hundreds of documents, not millions) suitable for learning project scale
 - English language documents are the primary focus; multi-language support is out of scope for initial version
 - Infrastructure setup is one-time configuration; dynamic scaling is not required for learning project
-- Security and access control rely on cloud service-level permissions; custom authentication is out of scope
+- Security and access control rely on cloud service-level permissions and managed identities; custom authentication is out of scope
 - Documents are primarily text-based insurance plans (similar to existing samples in docs/samples/)
 - System prioritizes simplicity and learning value over enterprise-grade features
+- Document processing is fully Azure-managed (AI Search Indexer + Skillset); no backend processing code
+- RAG orchestration is fully Azure-managed (AI Foundry RAG endpoint); backend only forwards requests
+- Backend responsibilities limited to session management and API forwarding
