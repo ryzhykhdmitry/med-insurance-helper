@@ -10,6 +10,8 @@
 
 Enable cloud-based document processing and AI-powered question answering for insurance plan documents. Users add PDF documents to Azure Blob Storage. Azure AI Search Indexer automatically monitors the blob container, processes new documents through a skillset (text extraction, chunking, embedding generation), and indexes them into a vector search index. The .NET API forwards chat requests to **Azure AI Foundry's RAG endpoint**, which orchestrates the entire retrieval-augmented generation pipeline (query embedding → search → context assembly → LLM response generation). All document processing AND RAG orchestration are handled by Azure services; the backend only manages sessions and forwards requests.
 
+**Scope**: Initial implementation focuses on core chat functionality (User Stories 1-3: Infrastructure Setup, Document Processing, and Question Answering). Advanced features like document summarization and cross-document comparison are excluded to maintain simplicity.
+
 ## Technical Context
 
 **Language/Version**: C# / .NET 8.0

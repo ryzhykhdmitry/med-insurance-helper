@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "System provisions Azure Blob Storage, Azure AI Search, and Azure AI Foundry resources using scripts. PDF documents stored in Blob Storage are automatically processed by Azure AI Search Indexer + Skillset (extraction, chunking, embedding, indexing). Azure AI Foundry RAG endpoint orchestrates retrieval-augmented generation: it generates query embeddings, searches the vector index, retrieves relevant chunks, assembles prompts, and calls the LLM for responses. An existing .NET API forwards user messages to Foundry's RAG endpoint and returns responses to the existing UI. The system supports question answering, summarization, and comparison across documents via natural language. Focus on a simple, minimal implementation suitable for a learning project with maximum use of Azure-managed services."
+**Input**: User description: "System provisions Azure Blob Storage, Azure AI Search, and Azure AI Foundry resources using scripts. PDF documents stored in Blob Storage are automatically processed by Azure AI Search Indexer + Skillset (extraction, chunking, embedding, indexing). Azure AI Foundry RAG endpoint orchestrates retrieval-augmented generation: it generates query embeddings, searches the vector index, retrieves relevant chunks, assembles prompts, and calls the LLM for responses. An existing .NET API forwards user messages to Foundry's RAG endpoint and returns responses to the existing UI. The system supports question answering across documents via natural language. Focus on a simple, minimal implementation suitable for a learning project with maximum use of Azure-managed services."
 
 ## Clarifications
 
@@ -75,38 +75,6 @@ Users need to ask natural language questions about uploaded documents and receiv
 
 ---
 
-### User Story 4 - Document Summarization (Priority: P4)
-
-Users need to request summaries of one or more documents to quickly understand key content without reading entire documents.
-
-**Why this priority**: Adds significant value for users who need to process multiple documents quickly, but is secondary to basic Q&A functionality.
-
-**Independent Test**: Can be fully tested by requesting a summary of a known document and verifying the summary captures key points. Delivers document comprehension capability.
-
-**Acceptance Scenarios**:
-
-1. **Given** document is ingested, **When** user requests summary, **Then** system generates concise summary of key document content
-2. **Given** multiple documents are ingested, **When** user requests summary of specific document, **Then** system returns summary for that document only
-3. **Given** lengthy document is ingested, **When** user requests summary, **Then** summary is under 500 words and captures essential information
-
----
-
-### User Story 5 - Cross-Document Comparison (Priority: P5)
-
-Users need to compare content across multiple documents to identify differences, similarities, and unique aspects of each document.
-
-**Why this priority**: This is an advanced analytical feature that provides additional value but is not essential for basic document retrieval. Can be added after core features are stable.
-
-**Independent Test**: Can be fully tested by requesting comparison of two or more documents and verifying the response highlights key differences and similarities. Delivers advanced analytical capability.
-
-**Acceptance Scenarios**:
-
-1. **Given** multiple documents are ingested, **When** user requests comparison, **Then** system identifies and presents key differences across documents
-2. **Given** multiple documents are ingested, **When** user requests comparison, **Then** system identifies common themes or shared content
-3. **Given** user specifies comparison criteria, **When** system processes request, **Then** comparison focuses on specified aspects (e.g., coverage, costs, benefits)
-
----
-
 ### Edge Cases
 
 - What happens when document is too large or has unsupported format? → Azure AI Search Indexer logs error in execution history; document not indexed
@@ -127,6 +95,7 @@ Users need to compare content across multiple documents to identify differences,
 ### Functional Requirements
 
 - **FR-001**: System MUST provide automated setup scripts for cloud infrastructure provisioning (Blob Storage, AI Search, AI Foundry)
+- **FR-001a**: Setup scripts MUST be idempotent and skip already-created resources without errors
 - **FR-002**: System MUST configure Azure AI Search Indexer to monitor blob container for new documents
 - **FR-003**: System MUST configure Azure AI Search Skillset to process documents (extraction, chunking, embedding, indexing)
 - **FR-004**: Azure AI Search Indexer MUST automatically detect new documents via schedule or change detection
@@ -136,23 +105,16 @@ Users need to compare content across multiple documents to identify differences,
 - **FR-008**: Azure AI Search Indexer MUST populate vector search index with chunks and embeddings
 - **FR-009**: System MUST accept natural language chat queries from users through existing application interface
 - **FR-010**: Backend MUST forward chat queries to Azure AI Foundry RAG endpoint with conversation history
-- **FR-011**: Azure AI Foundry RAG endpoint MUST generate query embeddings
-- **FR-012**: Azure AI Foundry RAG endpoint MUST search vector index for relevant chunks (hybrid: vector + semantic)
-- **FR-013**: Azure AI Foundry RAG endpoint MUST retrieve top-K relevant document chunks
-- **FR-014**: Azure AI Foundry RAG endpoint MUST assemble prompt with retrieved context and conversation history
-- **FR-015**: Azure AI Foundry RAG endpoint MUST call Azure OpenAI LLM to generate contextualized response
-- **FR-016**: Azure AI Foundry RAG endpoint MUST return response with source citations (blob path, relevance scores)
-- **FR-017**: Backend MUST return Foundry response to existing user interface
-- **FR-018**: System MUST support question answering functionality across all indexed documents via Foundry RAG
-- **FR-019**: System MUST support document summarization by retrieving all chunks for a document and calling Foundry
-- **FR-020**: System MUST support comparison of multiple documents by retrieving chunks and calling Foundry with comparison prompt
-- **FR-021**: Azure AI Search Indexer MUST handle document processing failures with automatic retry and exponential backoff
-- **FR-022**: Azure AI Search Indexer execution history MUST track processing status and error details
-- **FR-023**: Backend MUST maintain conversation sessions in-memory with session ID, message history, timestamps
-- **FR-024**: Backend MUST expire conversation sessions after 30 minutes of user inactivity
-- **FR-025**: Backend MUST allow users to continue asking questions within active session without losing context
-- **FR-026**: Backend MUST run background cleanup worker to remove expired sessions every 10 minutes
-- **FR-027**: System MUST integrate with existing application without requiring user interface changes
+- **FR-011**: Azure AI Foundry RAG endpoint MUST orchestrate complete retrieval-augmented generation pipeline including query embedding, vector search, context retrieval, prompt assembly, LLM response generation, and return responses with source citations (blob path, relevance scores)
+- **FR-012**: Backend MUST return Foundry response to existing user interface
+- **FR-013**: System MUST support question answering functionality across all indexed documents via Foundry RAG
+- **FR-014**: Azure AI Search Indexer MUST handle document processing failures with automatic retry and exponential backoff
+- **FR-015**: Azure AI Search Indexer execution history MUST track processing status and error details
+- **FR-016**: Backend MUST maintain conversation sessions in-memory with session ID, message history, timestamps
+- **FR-017**: Backend MUST expire conversation sessions after 30 minutes of user inactivity
+- **FR-018**: Backend MUST allow users to continue asking questions within active session without losing context
+- **FR-019**: Backend MUST run background cleanup worker to remove expired sessions every 10 minutes
+- **FR-020**: System MUST integrate with existing application without requiring user interface changes
 
 ### Key Entities
 
@@ -174,9 +136,7 @@ Users need to compare content across multiple documents to identify differences,
 - **SC-004**: Azure AI Search Indexer successfully processes content from 95% of uploaded documents
 - **SC-005**: Azure AI Foundry RAG endpoint retrieves relevant document chunks for 90% of typical user questions
 - **SC-006**: Users can ask follow-up questions and backend + Foundry maintain conversation context across 5+ message exchanges
-- **SC-007**: Document summaries (via Foundry) capture key information in under 500 words and are comprehensible to non-technical users
-- **SC-008**: Cross-document comparisons (via Foundry) identify differences across 3+ documents and complete within 10 seconds
-- **SC-009**: System handles at least 10 concurrent users without response time degradation beyond 20%
+- **SC-007**: System handles at least 10 concurrent users without response time degradation beyond 20%
 
 ## Assumptions
 
