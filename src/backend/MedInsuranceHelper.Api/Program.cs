@@ -2,6 +2,7 @@ using MedInsuranceHelper.Api.Configuration;
 using MedInsuranceHelper.Api.Middleware;
 using MedInsuranceHelper.Api.Services;
 using MedInsuranceHelper.Api.Services.VectorStore;
+using MedInsuranceHelper.Api.Workers;
 using Serilog;
 
 // Bootstrap Serilog early so startup errors are captured
@@ -45,8 +46,9 @@ try
     builder.Services.AddSingleton<IFileVectorStore, FileVectorStore>();
 
     builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
-    builder.Services.AddScoped<IPdfIngestionService, PdfIngestionService>();
-    builder.Services.AddScoped<IChunkingService, ChunkingService>();
+    // Document processing now handled by Azure AI Search Indexer - these services deprecated:
+    // builder.Services.AddScoped<IPdfIngestionService, PdfIngestionService>();
+    // builder.Services.AddScoped<IChunkingService, ChunkingService>();
     builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
     builder.Services.AddScoped<IFoundryClient, FoundryClient>();
     builder.Services.AddScoped<IRetrievalService, RetrievalService>();
@@ -55,6 +57,10 @@ try
     builder.Services.AddScoped<IRecommendationService, RecommendationService>();
     builder.Services.AddScoped<IIntentDetectionService, IntentDetectionService>();
     builder.Services.AddScoped<IChatOrchestrationService, ChatOrchestrationService>();
+    builder.Services.AddScoped<IFoundryRagService, FoundryRagService>();
+    
+    // --- Background Workers ---
+    builder.Services.AddHostedService<SessionCleanupWorker>();
 
     var app = builder.Build();
 

@@ -12,6 +12,21 @@ public class AppSettings
 
     /// <summary>Azure AI Foundry endpoint URL (e.g. https://my-endpoint.openai.azure.com/).</summary>
     public string FoundryEndpoint { get; set; } = string.Empty;
+    
+    /// <summary>Azure AI Foundry project endpoint for RAG.</summary>
+    public string ProjectEndpoint { get; set; } = string.Empty;
+    
+    /// <summary>Azure AI Foundry RAG deployment name.</summary>
+    public string RagDeploymentName { get; set; } = "chat-with-data";
+    
+    /// <summary>Azure AI Search endpoint URL.</summary>
+    public string SearchEndpoint { get; set; } = string.Empty;
+    
+    /// <summary>Azure AI Search API key.</summary>
+    public string SearchKey { get; set; } = string.Empty;
+    
+    /// <summary>Azure AI Search index name for insurance documents.</summary>
+    public string SearchIndexName { get; set; } = "insurance-documents";
 
     /// <summary>Azure Blob Storage connection string (Azurite for local dev).</summary>
     public string BlobConnectionString { get; set; } = string.Empty;

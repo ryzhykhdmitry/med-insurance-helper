@@ -14,6 +14,9 @@ public class Message
 
     /// <summary>Citations attached to assistant messages.</summary>
     public List<Citation> Citations { get; set; } = new();
+    
+    /// <summary>Source citations from Foundry RAG response (assistant messages only).</summary>
+    public List<SourceCitation>? SourceCitations { get; set; }
 }
 
 /// <summary>A source citation produced during RAG.</summary>

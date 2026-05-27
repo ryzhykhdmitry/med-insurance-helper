@@ -32,3 +32,13 @@ public class ChatResponse
     public string SessionId { get; set; } = string.Empty;
     public ResponseArtifact ResponseArtifact { get; set; } = new();
 }
+
+/// <summary>Response envelope for POST /api/chat (Foundry RAG integration).</summary>
+public class ChatResponseV2
+{
+    public string SessionId { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public List<SourceCitation> SourceCitations { get; set; } = new();
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresAt { get; set; }
+}

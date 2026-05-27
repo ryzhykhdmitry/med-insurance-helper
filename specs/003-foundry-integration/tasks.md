@@ -24,11 +24,11 @@
 
 ### Infrastructure Provisioning Scripts
 
-- [ ] T001 [P] [US1] Create `scripts/setup-blob-storage.ps1` to provision Azure Blob Storage container for PDFs with idempotent resource checks (skip if container already exists)
-- [ ] T002 [P] [US1] Create `scripts/setup-search-indexer.ps1` to configure Azure AI Search with indexer, skillset, and vector index with idempotent resource checks (skip if resources already exist)
+- [X] T001 [P] [US1] Create `scripts/setup-blob-storage.ps1` to provision Azure Blob Storage container for PDFs with idempotent resource checks (skip if container already exists)
+- [X] T002 [P] [US1] Create `scripts/setup-search-indexer.ps1` to configure Azure AI Search with indexer, skillset, and vector index with idempotent resource checks (skip if resources already exist)
 - [ ] T002a [US1] Verify Azure AI Search indexer automatic retry behavior and execution history tracking in Azure Portal after T002 completes
-- [ ] T003 [P] [US1] Create `scripts/setup-foundry-project.ps1` to configure Azure AI Foundry RAG endpoint connected to search index with idempotent resource checks (skip if project already configured)
-- [ ] T004 [US1] Create `scripts/README.md` documenting script execution order and required Azure CLI commands
+- [X] T003 [P] [US1] Create `scripts/setup-foundry-project.ps1` to configure Azure AI Foundry RAG endpoint connected to search index with idempotent resource checks (skip if project already configured)
+- [X] T004 [US1] Create `scripts/README.md` documenting script execution order and required Azure CLI commands
 
 **Checkpoint**: Azure resources provisioned and ready for document uploads
 
@@ -42,14 +42,14 @@
 
 ### Data Models
 
-- [ ] T005 [P] Add `ExpiresAt` property to existing `src/backend/MedInsuranceHelper.Api/Models/ConversationSession.cs`
-- [ ] T006 [P] Add optional `SourceCitations` property (List<SourceCitation>) to existing `src/backend/MedInsuranceHelper.Api/Models/Message.cs`
-- [ ] T007 [P] Create `src/backend/MedInsuranceHelper.Api/Models/SourceCitation.cs` DTO for Foundry response citations (DocumentId, Content, FileName, PageNumber, ChunkIndex, Score)
+- [X] T005 [P] Add `ExpiresAt` property to existing `src/backend/MedInsuranceHelper.Api/Models/ConversationSession.cs`
+- [X] T006 [P] Add optional `SourceCitations` property (List<SourceCitation>) to existing `src/backend/MedInsuranceHelper.Api/Models/Message.cs`
+- [X] T007 [P] Create `src/backend/MedInsuranceHelper.Api/Models/SourceCitation.cs` DTO for Foundry response citations (DocumentId, Content, FileName, PageNumber, ChunkIndex, Score)
 
 ### Configuration
 
-- [ ] T008 [US1] Add Azure Foundry settings to `src/backend/MedInsuranceHelper.Api/Configuration/AppSettings.cs` (ProjectEndpoint, ApiKey, RagDeploymentName)
-- [ ] T009 Add `Azure.AI.Projects` NuGet package to `src/backend/MedInsuranceHelper.Api/MedInsuranceHelper.Api.csproj`
+- [X] T008 [US1] Add Azure Foundry settings to `src/backend/MedInsuranceHelper.Api/Configuration/AppSettings.cs` (ProjectEndpoint, ApiKey, RagDeploymentName)
+- [X] T009 Add `Azure.AI.Projects` NuGet package to `src/backend/MedInsuranceHelper.Api/MedInsuranceHelper.Api.csproj`
 
 **Checkpoint**: Models and configuration ready for service implementation
 
@@ -61,14 +61,14 @@
 
 ### Session Service Extensions
 
-- [ ] T010 Extend existing `src/backend/MedInsuranceHelper.Api/Services/SessionService.cs` to calculate `ExpiresAt = LastActiveAt + 30 minutes`
-- [ ] T011 Add `RemoveExpiredSessions()` method to `SessionService` to remove sessions where `ExpiresAt < UtcNow`
-- [ ] T012 Update session retrieval to check expiration before returning (return null if expired)
+- [X] T010 Extend existing `src/backend/MedInsuranceHelper.Api/Services/SessionService.cs` to calculate `ExpiresAt = LastActiveAt + 30 minutes`
+- [X] T011 Add `RemoveExpiredSessions()` method to `SessionService` to remove sessions where `ExpiresAt < UtcNow`
+- [X] T012 Update session retrieval to check expiration before returning (return null if expired)
 
 ### Background Cleanup Worker
 
-- [ ] T013 Create `src/backend/MedInsuranceHelper.Api/Workers/SessionCleanupWorker.cs` as BackgroundService that runs every 10 minutes
-- [ ] T014 Register `SessionCleanupWorker` as hosted service in `src/backend/MedInsuranceHelper.Api/Program.cs`
+- [X] T013 Create `src/backend/MedInsuranceHelper.Api/Workers/SessionCleanupWorker.cs` as BackgroundService that runs every 10 minutes
+- [X] T014 Register `SessionCleanupWorker` as hosted service in `src/backend/MedInsuranceHelper.Api/Program.cs`
 
 **Checkpoint**: Session management with automatic expiration working
 
@@ -82,11 +82,11 @@
 
 ### Foundry RAG Service
 
-- [ ] T015 Create `src/backend/MedInsuranceHelper.Api/Services/FoundryRagService.cs` with `ChatAsync()` method
-- [ ] T016 Implement Foundry RAG request construction (user message, conversation history, retrieval params)
-- [ ] T017 Implement Foundry RAG response parsing (answer text, source citations, relevance scores)
-- [ ] T018 Add error handling for Foundry service unavailability (return 503 on timeout/failure)
-- [ ] T019 Register `FoundryRagService` in DI container in `src/backend/MedInsuranceHelper.Api/Program.cs`
+- [X] T015 Create `src/backend/MedInsuranceHelper.Api/Services/FoundryRagService.cs` with `ChatAsync()` method
+- [X] T016 Implement Foundry RAG request construction (user message, conversation history, retrieval params)
+- [X] T017 Implement Foundry RAG response parsing (answer text, source citations, relevance scores)
+- [X] T018 Add error handling for Foundry service unavailability (return 503 on timeout/failure)
+- [X] T019 Register `FoundryRagService` in DI container in `src/backend/MedInsuranceHelper.Api/Program.cs`
 
 **Checkpoint**: Foundry integration service ready to be called from controllers
 
@@ -100,8 +100,8 @@
 
 ### Chat Controller Implementation
 
-- [ ] T020 Extend existing `src/backend/MedInsuranceHelper.Api/Controllers/ChatController.cs` with session-aware chat endpoint
-- [ ] T021 Implement POST `/api/chat` endpoint logic:
+- [X] T020 Extend existing `src/backend/MedInsuranceHelper.Api/Controllers/ChatController.cs` with session-aware chat endpoint
+- [X] T021 Implement POST `/api/chat` endpoint logic:
   - Validate message (non-empty, max 2000 chars)
   - Get or create session via `SessionService`
   - Forward to `FoundryRagService.ChatAsync()`
@@ -110,8 +110,8 @@
 
 ### Session Management Endpoints
 
-- [ ] T022 [P] Implement GET `/api/sessions/{id}` endpoint to check session status (metadata only, no expiration extension)
-- [ ] T023 [P] Implement DELETE `/api/sessions/{id}` endpoint to explicitly end session
+- [X] T022 [P] Implement GET `/api/sessions/{id}` endpoint to check session status (metadata only, no expiration extension)
+- [X] T023 [P] Implement DELETE `/api/sessions/{id}` endpoint to explicitly end session
 
 **Checkpoint**: Chat API fully functional with session management
 
@@ -141,13 +141,13 @@
 
 ### Documentation Updates
 
-- [ ] T031 Update `README.md` at repository root with feature overview and quickstart link
-- [ ] T032 Verify `specs/003-foundry-integration/quickstart.md` matches actual implementation
+- [X] T031 Update `README.md` at repository root with feature overview and quickstart link
+- [X] T032 Verify `specs/003-foundry-integration/quickstart.md` matches actual implementation
 
 ### Code Cleanup
 
-- [ ] T033 Remove backend processing services no longer needed (ChunkingService, EmbeddingService, PdfIngestionService) since processing is now handled by Azure AI Search
-- [ ] T034 Remove any unused document processing models if any exist (DocumentChunk, ProcessingStatus, etc.) that are not referenced by remaining code
+- [X] T033 Remove backend processing services no longer needed (ChunkingService, EmbeddingService, PdfIngestionService) since processing is now handled by Azure AI Search
+- [X] T034 Remove any unused document processing models if any exist (DocumentChunk, ProcessingStatus, etc.) that are not referenced by remaining code
 
 ---
 
