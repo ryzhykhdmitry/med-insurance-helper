@@ -1,6 +1,8 @@
+using MedInsuranceHelper.Api.Configuration;
 using MedInsuranceHelper.Api.Models;
 using MedInsuranceHelper.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace MedInsuranceHelper.Api.Controllers;
 
@@ -16,17 +18,20 @@ public class ChatController : ControllerBase
     private readonly IFoundryRagService _foundryRag;
     private readonly ISessionService _sessions;
     private readonly ILogger<ChatController> _logger;
+    private readonly AppSettings _settings;
 
     public ChatController(
         IChatOrchestrationService orchestration,
         IFoundryRagService foundryRag,
         ISessionService sessions,
-        ILogger<ChatController> logger)
+        ILogger<ChatController> logger,
+        IOptions<AppSettings> options)
     {
         _orchestration = orchestration;
         _foundryRag = foundryRag;
         _sessions = sessions;
         _logger = logger;
+        _settings = options.Value;
     }
 
     /// <summary>
@@ -86,7 +91,7 @@ public class ChatController : ControllerBase
             {
                 UserQuery = request.Message.Text,
                 ConversationHistory = session.Messages.ToList(),
-                TopK = 5
+                TopK = _settings.DefaultTopK
             };
 
             var ragResponse = await _foundryRag.ChatAsync(ragRequest, ct);

@@ -81,7 +81,34 @@
   font-size: 0.8rem;
 }
 
-.citations-label { font-weight: 600; color: #555; margin-bottom: 4px; }
+.citations-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  padding: 2px 0;
+  transition: color 0.2s;
+}
+
+.citations-toggle:hover { color: #1a73e8; }
+
+.toggle-arrow {
+  font-size: 0.65rem;
+  display: inline-block;
+  transition: transform 0.2s;
+  color: #888;
+}
+
+.toggle-arrow.expanded { transform: rotate(90deg); }
+
+.citations-list {
+  margin-top: 6px;
+}
 
 .citation-item {
   display: flex;

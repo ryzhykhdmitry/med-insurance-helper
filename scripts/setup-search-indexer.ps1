@@ -123,7 +123,7 @@ $indexSchema = @{
                 kind = "hnsw"
                 hnswParameters = @{
                     metric = "cosine"
-                    m = 4
+                    m = 16
                     efConstruction = 400
                     efSearch = 500
                 }

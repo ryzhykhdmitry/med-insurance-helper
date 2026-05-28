@@ -7,7 +7,7 @@
   <!-- Message list -->
   <div class="message-list">
     <div
-      *ngFor="let msg of messages"
+      *ngFor="let msg of messages; let i = index"
       class="message"
       [class.user-message]="msg.role === 'user'"
       [class.assistant-message]="msg.role === 'assistant'"
@@ -35,16 +35,21 @@
 
       <!-- Citations list -->
       <div *ngIf="msg.citations && msg.citations.length > 0 && !msg.isLoading" class="citations">
-        <div class="citations-label">Sources:</div>
-        <div
-          *ngFor="let citation of msg.citations; let i = index"
-          class="citation-item"
-          (click)="showCitation(citation)"
-          title="Click to view details"
-        >
-          <span class="citation-badge">{{ i + 1 }}</span>
-          <span class="citation-doc">{{ citation.fileName }}</span>
-          <span *ngIf="citation.pageNumber" class="citation-page">p. {{ citation.pageNumber }}</span>
+        <button class="citations-toggle" (click)="toggleSources(i)">
+          <span class="toggle-arrow" [class.expanded]="isSourcesExpanded(i)">▶</span>
+          Sources ({{ msg.citations.length }})
+        </button>
+        <div *ngIf="isSourcesExpanded(i)" class="citations-list">
+          <div
+            *ngFor="let citation of msg.citations; let ci = index"
+            class="citation-item"
+            (click)="showCitation(citation)"
+            title="Click to view details"
+          >
+            <span class="citation-badge">{{ ci + 1 }}</span>
+            <span class="citation-doc">{{ citation.fileName }}</span>
+            <span *ngIf="citation.pageNumber" class="citation-page">p. {{ citation.pageNumber }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -94,10 +99,7 @@
             <span class="meta-label">Page:</span>
             <span class="meta-value">{{ selectedCitation.pageNumber }}</span>
           </div>
-          <div class="meta-row">
-            <span class="meta-label">Relevance:</span>
-            <span class="meta-value">{{ (selectedCitation.score * 100).toFixed(0) }}%</span>
-          </div>
+
         </div>
         <div class="citation-content">
           <div class="content-label">Excerpt:</div>

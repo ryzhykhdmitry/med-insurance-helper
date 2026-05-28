@@ -18,6 +18,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   inputText = '';
   isLoading = false;
   selectedCitation: Citation | null = null;
+  sourcesExpanded = new Map<number, boolean>();
   private sub?: Subscription;
 
   constructor(
@@ -101,6 +102,14 @@ export class ChatComponent implements OnInit, OnDestroy {
   /**
    * Open citation detail modal
    */
+  toggleSources(msgIdx: number): void {
+    this.sourcesExpanded.set(msgIdx, !this.sourcesExpanded.get(msgIdx));
+  }
+
+  isSourcesExpanded(msgIdx: number): boolean {
+    return this.sourcesExpanded.get(msgIdx) ?? false;
+  }
+
   showCitation(citation: Citation): void {
     this.selectedCitation = citation;
   }

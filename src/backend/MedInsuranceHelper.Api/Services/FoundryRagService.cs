@@ -121,9 +121,12 @@ public class FoundryRagService : IFoundryRagService
 
         try
         {
+            // Fetch a wider candidate pool so we can filter by most relevant files
+            int candidateSize = topK * 3;
+
             var vectorQuery = new VectorizedQuery(queryEmbedding)
             {
-                KNearestNeighborsCount = topK,
+                KNearestNeighborsCount = candidateSize,
                 Fields = { "contentVector" }
             };
 
@@ -133,16 +136,16 @@ public class FoundryRagService : IFoundryRagService
                 {
                     Queries = { vectorQuery }
                 },
-                Size = topK,
-                Select = { "id", "content", "fileName", "blobUri", "chunkIndex" }
+                Size = candidateSize,
+                Select = { "id", "content", "fileName", "blobUri", "chunkIndex", "pageNumber" }
             };
 
             var response = await _searchClient.SearchAsync<SearchDocument>(query, searchOptions, ct);
-            var citations = new List<SourceCitation>();
+            var candidates = new List<SourceCitation>();
 
             await foreach (var result in response.Value.GetResultsAsync())
             {
-                citations.Add(new SourceCitation
+                candidates.Add(new SourceCitation
                 {
                     DocumentId = result.Document.TryGetValue("blobUri", out var uri) ? uri?.ToString() ?? "" : "",
                     Content = result.Document.TryGetValue("content", out var content) ? content?.ToString() ?? "" : "",
@@ -153,7 +156,26 @@ public class FoundryRagService : IFoundryRagService
                 });
             }
 
-            _logger.LogInformation("Retrieved {Count} document chunks from search index", citations.Count);
+            // Rank files by their total score across all retrieved chunks.
+            // Keep top 2 files so single-plan queries return one file and
+            // comparison queries ("compare X and Y") return two files.
+            var topFiles = candidates
+                .GroupBy(c => c.FileName)
+                .OrderByDescending(g => g.Sum(c => c.Score))
+                .Take(2)
+                .Select(g => g.Key)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var citations = candidates
+                .Where(c => topFiles.Contains(c.FileName))
+                .OrderByDescending(c => c.Score)
+                .Take(topK)
+                .ToList();
+
+            _logger.LogInformation(
+                "Retrieved {Total} candidates; kept {Count} chunks from {Files} file(s): {FileNames}",
+                candidates.Count, citations.Count, topFiles.Count, string.Join(", ", topFiles));
+
             return citations;
         }
         catch (Exception ex)
@@ -175,16 +197,17 @@ Answer based on your general knowledge. If you don't know, say so.";
             $"[{i + 1}] From {c.FileName} (Chunk {c.ChunkIndex}):\n{c.Content}"));
 
         return $@"You are a helpful assistant for medical insurance questions.
-Answer questions based ONLY on the following document excerpts. 
-If the answer is not in the provided context, say ""I don't have enough information to answer that question.""
+Answer questions using the following document excerpts as your primary source.
 
 Retrieved Documents:
 {context}
 
 Instructions:
-- Answer concisely and accurately
-- Cite document numbers [1], [2], etc. when referencing information
-- If information is not in the documents, do not make up answers";
+- Answer concisely and accurately based on the provided documents
+- Cite document numbers [1], [2], etc. when referencing specific information
+- If the documents cover the topic partially, answer with what is available and note what is missing
+- Only say you don't have information if the topic is completely absent from all provided documents
+- Do not make up facts not present in the documents";
     }
 
     private List<ChatMessage> BuildChatMessages(
