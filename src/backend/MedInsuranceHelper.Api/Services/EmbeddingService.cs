@@ -28,9 +28,16 @@ public class EmbeddingService : IEmbeddingService
         _logger = logger;
         _settings = options.Value;
 
+        // Specify API version explicitly to ensure compatibility
+        var clientOptions = new AzureOpenAIClientOptions
+        {
+            NetworkTimeout = TimeSpan.FromSeconds(30)
+        };
+
         var azureClient = new AzureOpenAIClient(
             new Uri(_settings.FoundryEndpoint),
-            new System.ClientModel.ApiKeyCredential(_settings.FoundryApiKey));
+            new System.ClientModel.ApiKeyCredential(_settings.FoundryApiKey),
+            clientOptions);
         _client = azureClient.GetEmbeddingClient(_settings.EmbeddingDeployment);
     }
 

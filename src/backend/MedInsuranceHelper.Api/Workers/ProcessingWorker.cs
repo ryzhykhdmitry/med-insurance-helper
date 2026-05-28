@@ -53,7 +53,8 @@ public class ProcessingWorker : ControllerBase
             return NotFound($"Offer '{offerId}' not found.");
 
         // Kick off in the background — return immediately so callers get 200 fast
-        _ = Task.Run(() => RunPipelineAsync(offer, ct), CancellationToken.None);
+        // Use CancellationToken.None to prevent HTTP request completion from canceling the pipeline
+        _ = Task.Run(() => RunPipelineAsync(offer, CancellationToken.None), CancellationToken.None);
 
         return Ok(new ProcessResponse("processing"));
     }
@@ -67,10 +68,15 @@ public class ProcessingWorker : ControllerBase
         try
         {
             // 1. Download PDF
-            await using var stream = await _blob.DownloadAsync(offer.BlobUri, ct);
+            await using var downloadStream = await _blob.DownloadAsync(offer.BlobUri, ct);
+            
+            // Copy to MemoryStream for seeking support (required by PdfPig)
+            using var seekableStream = new MemoryStream();
+            await downloadStream.CopyToAsync(seekableStream, ct);
+            seekableStream.Position = 0;
 
             // 2. Parse pages
-            var pages = await _pdf.ParseAsync(stream, offer.Id, ct);
+            var pages = await _pdf.ParseAsync(seekableStream, offer.Id, ct);
             if (pages.Count == 0)
             {
                 NotifyIngestionFailure(offer, "PDF produced no extractable pages.");

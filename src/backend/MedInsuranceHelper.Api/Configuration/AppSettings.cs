@@ -38,7 +38,7 @@ public class AppSettings
     public string EmbeddingDeployment { get; set; } = "text-embedding-ada-002";
 
     /// <summary>Deployment name for the chat completion model in Azure AI Foundry.</summary>
-    public string ChatDeployment { get; set; } = "gpt-4o";
+    public string ChatDeployment { get; set; } = "gpt-4.1-nano";//"gpt-4o";
 
     /// <summary>Local directory for vector store JSON files.</summary>
     public string VectorStoreDirectory { get; set; } = "data/vectors";

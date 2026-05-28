@@ -58,14 +58,14 @@ if ($searchExists) {
     Write-Host "[OK] Search service already exists" -ForegroundColor Green
     $search = $searchExists | ConvertFrom-Json
 } else {
-    Write-Host "[WARN] Creating Azure AI Search service (Basic tier)..." -ForegroundColor Yellow
+    Write-Host "[WARN] Creating Azure AI Search service (Free tier)..." -ForegroundColor Yellow
     Write-Host "       (This may take 3-5 minutes)" -ForegroundColor Gray
     
     az search service create `
         --name $SearchServiceName `
         --resource-group $ResourceGroup `
         --location $Location `
-        --sku basic `
+        --sku free `
         --output none
     
     Write-Host "[OK] Search service created" -ForegroundColor Green
@@ -106,11 +106,14 @@ Write-Host "`n[CONFIG] Creating index schema with vector fields..." -ForegroundC
 $indexSchema = @{
     name = $IndexName
     fields = @(
-        @{ name = "id"; type = "Edm.String"; key = $true; searchable = $false }
-        @{ name = "content"; type = "Edm.String"; searchable = $true; filterable = $false }
+        @{ name = "id"; type = "Edm.String"; key = $true; searchable = $true; filterable = $true; analyzer = "keyword" }
+        @{ name = "chunk_id"; type = "Edm.String"; searchable = $false; filterable = $true; sortable = $true }
+        @{ name = "parent_id"; type = "Edm.String"; searchable = $false; filterable = $true }
+        @{ name = "content"; type = "Edm.String"; searchable = $true; filterable = $false; sortable = $false; facetable = $false; analyzer = "standard" }
         @{ name = "fileName"; type = "Edm.String"; searchable = $true; filterable = $true; facetable = $true }
         @{ name = "blobUri"; type = "Edm.String"; searchable = $false; filterable = $true }
         @{ name = "contentVector"; type = "Collection(Edm.Single)"; searchable = $true; dimensions = 1536; vectorSearchProfile = "vector-profile" }
+        @{ name = "chunkIndex"; type = "Edm.Int32"; searchable = $false; filterable = $true; sortable = $true }
         @{ name = "lastModified"; type = "Edm.DateTimeOffset"; searchable = $false; filterable = $true; sortable = $true }
     )
     vectorSearch = @{
@@ -137,7 +140,7 @@ $indexSchema = @{
 
 # Check if index exists
 try {
-    $indexExists = Invoke-RestMethod -Uri "$searchEndpoint/indexes/$IndexName`?api-version=2023-11-01" `
+    $indexExists = Invoke-RestMethod -Uri "$searchEndpoint/indexes/$IndexName`?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey } `
         -Method Get `
         -ErrorAction Stop
@@ -150,7 +153,7 @@ if ($indexExists) {
 } else {
     Write-Host "[WARN] Creating index..." -ForegroundColor Yellow
     
-    Invoke-RestMethod -Uri "$searchEndpoint/indexes?api-version=2023-11-01" `
+    Invoke-RestMethod -Uri "$searchEndpoint/indexes?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
         -Method Post `
         -Body $indexSchema `
@@ -174,7 +177,7 @@ $dataSource = @{
 } | ConvertTo-Json -Depth 10
 
 try {
-    $dataSourceExists = Invoke-RestMethod -Uri "$searchEndpoint/datasources/insurance-docs-datasource?api-version=2023-11-01" `
+    $dataSourceExists = Invoke-RestMethod -Uri "$searchEndpoint/datasources/insurance-docs-datasource?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey } `
         -Method Get `
         -ErrorAction Stop
@@ -185,7 +188,7 @@ try {
 if ($dataSourceExists) {
     Write-Host "[OK] Data source already exists" -ForegroundColor Green
 } else {
-    Invoke-RestMethod -Uri "$searchEndpoint/datasources?api-version=2023-11-01" `
+    Invoke-RestMethod -Uri "$searchEndpoint/datasources?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
         -Method Post `
         -Body $dataSource `
@@ -205,7 +208,8 @@ $skillset = @{
             "@odata.type" = "#Microsoft.Skills.Text.SplitSkill"
             context = "/document"
             textSplitMode = "pages"
-            maximumPageLength = 2000
+            maximumPageLength = 1000
+            pageOverlapLength = 100
             inputs = @(
                 @{ name = "text"; source = "/document/content" }
             )
@@ -219,6 +223,7 @@ $skillset = @{
             resourceUri = $openAIEndpoint
             apiKey = $openAIKey
             deploymentId = $EmbeddingDeployment
+            modelName = "text-embedding-ada-002"
             inputs = @(
                 @{ name = "text"; source = "/document/pages/*" }
             )
@@ -227,10 +232,26 @@ $skillset = @{
             )
         }
     )
+    indexProjections = @{
+        selectors = @(
+            @{
+                targetIndexName = $IndexName
+                parentKeyFieldName = "parent_id"
+                sourceContext = "/document/pages/*"
+                mappings = @(
+                    @{ name = "content"; source = "/document/pages/*" }
+                    @{ name = "contentVector"; source = "/document/pages/*/vector" }
+                    @{ name = "fileName"; source = "/document/metadata_storage_name" }
+                    @{ name = "blobUri"; source = "/document/metadata_storage_path" }
+                    @{ name = "lastModified"; source = "/document/metadata_storage_last_modified" }
+                )
+            }
+        )
+    }
 } | ConvertTo-Json -Depth 10
 
 try {
-    $skillsetExists = Invoke-RestMethod -Uri "$searchEndpoint/skillsets/insurance-docs-skillset?api-version=2023-11-01" `
+    $skillsetExists = Invoke-RestMethod -Uri "$searchEndpoint/skillsets/insurance-docs-skillset?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey } `
         -Method Get `
         -ErrorAction Stop
@@ -241,7 +262,7 @@ try {
 if ($skillsetExists) {
     Write-Host "[OK] Skillset already exists" -ForegroundColor Green
 } else {
-    Invoke-RestMethod -Uri "$searchEndpoint/skillsets?api-version=2023-11-01" `
+    Invoke-RestMethod -Uri "$searchEndpoint/skillsets?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
         -Method Post `
         -Body $skillset `
@@ -264,24 +285,18 @@ $indexer = @{
     parameters = @{
         batchSize = 1
         maxFailedItems = 0
+        maxFailedItemsPerBatch = 0
         configuration = @{
             dataToExtract = "contentAndMetadata"
             parsingMode = "default"
+            indexedFileNameExtensions = ".pdf"
+            imageAction = "none"
         }
     }
-    fieldMappings = @(
-        @{ sourceFieldName = "metadata_storage_name"; targetFieldName = "fileName" }
-        @{ sourceFieldName = "metadata_storage_path"; targetFieldName = "blobUri" }
-        @{ sourceFieldName = "metadata_storage_last_modified"; targetFieldName = "lastModified" }
-    )
-    outputFieldMappings = @(
-        @{ sourceFieldName = "/document/pages/*"; targetFieldName = "content" }
-        @{ sourceFieldName = "/document/pages/*/vector"; targetFieldName = "contentVector" }
-    )
 } | ConvertTo-Json -Depth 10
 
 try {
-    $indexerExists = Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer?api-version=2023-11-01" `
+    $indexerExists = Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey } `
         -Method Get `
         -ErrorAction Stop
@@ -292,7 +307,7 @@ try {
 if ($indexerExists) {
     Write-Host "[OK] Indexer already exists" -ForegroundColor Green
 } else {
-    Invoke-RestMethod -Uri "$searchEndpoint/indexers?api-version=2023-11-01" `
+    Invoke-RestMethod -Uri "$searchEndpoint/indexers?api-version=2024-07-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
         -Method Post `
         -Body $indexer `
@@ -303,7 +318,7 @@ if ($indexerExists) {
 
 # Run indexer immediately
 Write-Host "`n[RUN] Running indexer now (initial run)..." -ForegroundColor Cyan
-Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer/run?api-version=2023-11-01" `
+Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer/run?api-version=2024-07-01" `
     -Headers @{ "api-key" = $searchKey } `
     -Method Post `
     -ErrorAction SilentlyContinue | Out-Null

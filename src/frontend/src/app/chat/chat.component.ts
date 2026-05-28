@@ -1,8 +1,9 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
-import { ChatService, ChatMessage } from './chat.service';
+import { ChatService, ChatMessage, Citation } from './chat.service';
 import { SessionService } from './session.service';
 
 @Component({
@@ -16,11 +17,13 @@ export class ChatComponent implements OnInit, OnDestroy {
   messages: ChatMessage[] = [];
   inputText = '';
   isLoading = false;
+  selectedCitation: Citation | null = null;
   private sub?: Subscription;
 
   constructor(
     private chatService: ChatService,
-    private sessionService: SessionService
+    private sessionService: SessionService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -53,12 +56,11 @@ export class ChatComponent implements OnInit, OnDestroy {
           if (response.sessionId) {
             (this.sessionService as any)['_sessionId'] = response.sessionId;
           }
-          const artifact = response.responseArtifact;
-          const combined = artifact.sections.map(s => s.content).join('\n\n');
+          // Handle new Foundry RAG response format
           this.messages[msgIdx] = {
             role: 'assistant',
-            text: combined,
-            sections: artifact.sections,
+            text: response.message,
+            citations: response.sourceCitations,
             isLoading: false
           };
           this.isLoading = false;
@@ -93,6 +95,60 @@ export class ChatComponent implements OnInit, OnDestroy {
       case 'recommendation': return '⭐ Recommendation';
       case 'clarification': return '❓ Clarification needed';
       default: return '💬 Answer';
+    }
+  }
+
+  /**
+   * Open citation detail modal
+   */
+  showCitation(citation: Citation): void {
+    this.selectedCitation = citation;
+  }
+
+  /**
+   * Close citation detail modal
+   */
+  closeCitation(): void {
+    this.selectedCitation = null;
+  }
+
+  /**
+   * Get citation number by index (1-based)
+   */
+  getCitationNumber(msg: ChatMessage, citation: Citation): number {
+    return (msg.citations?.indexOf(citation) ?? -1) + 1;
+  }
+
+  /**
+   * Render message text with clickable citation numbers
+   */
+  renderMessageWithCitations(text: string, citations?: Citation[]): SafeHtml {
+    if (!citations || citations.length === 0) {
+      return this.sanitizer.sanitize(1, text) || '';
+    }
+
+    // Replace citation markers [1], [2], etc. with clickable spans
+    const rendered = text.replace(/\[(\d+)\]/g, (match, num) => {
+      const index = parseInt(num, 10) - 1;
+      if (index >= 0 && index < citations.length) {
+        return `<span class="citation-link" data-citation-index="${index}">${match}</span>`;
+      }
+      return match;
+    });
+
+    return this.sanitizer.bypassSecurityTrustHtml(rendered);
+  }
+
+  /**
+   * Handle click on citation number in message text
+   */
+  onCitationClick(event: MouseEvent, msg: ChatMessage): void {
+    const target = event.target as HTMLElement;
+    if (target.classList.contains('citation-link')) {
+      const index = parseInt(target.getAttribute('data-citation-index') || '-1', 10);
+      if (index >= 0 && msg.citations && msg.citations[index]) {
+        this.showCitation(msg.citations[index]);
+      }
     }
   }
 }

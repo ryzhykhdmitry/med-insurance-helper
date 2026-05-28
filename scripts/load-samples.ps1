@@ -17,9 +17,10 @@ param(
 $SamplesDir = "$PSScriptRoot\..\docs\samples"
 
 $samples = @(
-    @{ File = "alpha-health-plan.txt"; Insurer = "Alpha Health Insurance"; Title = "Alpha Health Standard Plan" },
-    @{ File = "beta-care-plan.txt";    Insurer = "Beta Care Insurance";    Title = "Beta Care Comprehensive Plan" },
-    @{ File = "gamma-premium-plan.txt";Insurer = "Gamma Premium Insurance";Title = "Gamma Premium Elite Plan" }
+    @{ File = "https://medinsurancestorage.blob.core.windows.net/insurance-docs/ComplexGoldENG.pdf"; Insurer = "Luxmed"; Title = "Complex Gold Plan" }
+    #@{ File = "alpha-health-plan.txt"; Insurer = "Alpha Health Insurance"; Title = "Alpha Health Standard Plan" },
+    #@{ File = "beta-care-plan.txt";    Insurer = "Beta Care Insurance";    Title = "Beta Care Comprehensive Plan" },
+    #@{ File = "gamma-premium-plan.txt";Insurer = "Gamma Premium Insurance";Title = "Gamma Premium Elite Plan" }
 )
 
 function Invoke-ApiPost {
@@ -34,24 +35,24 @@ function Invoke-ApiPost {
     }
 }
 
-Write-Host "=== Medical Insurance Helper — Sample Loader ===" -ForegroundColor Cyan
+Write-Host "=== Medical Insurance Helper - Sample Loader ===" -ForegroundColor Cyan
 Write-Host "API: $ApiBaseUrl" -ForegroundColor Gray
 Write-Host ""
 
 $offerIds = @()
 
 foreach ($sample in $samples) {
-    $filePath = Join-Path $SamplesDir $sample.File
-    if (-not (Test-Path $filePath)) {
-        Write-Warning "Sample file not found: $filePath"
-        continue
-    }
+    # $filePath = Join-Path $SamplesDir $sample.File
+    # if (-not (Test-Path $filePath)) {
+    #     Write-Warning "Sample file not found: $filePath"
+    #     continue
+    # }
 
     Write-Host "Ingesting '$($sample.Title)' from $($sample.Insurer)..." -ForegroundColor Yellow
 
     # For local dev: use a mock blob URI pointing to the local file path
     # In a real deployment, upload to blob first then pass the real URI
-    $blobUri = "file://samples/$($sample.File)"
+    $blobUri = "$($sample.File)"
 
     $ingestResult = Invoke-ApiPost "$ApiBaseUrl/api/ingest" @{
         blobUri     = $blobUri
@@ -66,12 +67,12 @@ foreach ($sample in $samples) {
 
     $offerId = $ingestResult.offerId
     $offerIds += $offerId
-    Write-Host "  ✓ Registered: offerId=$offerId" -ForegroundColor Green
+    Write-Host "  [OK] Registered: offerId=$offerId" -ForegroundColor Green
 
     # Trigger processing
     $processResult = Invoke-ApiPost "$ApiBaseUrl/api/process/$offerId" @{}
     if ($processResult -and $processResult.status -eq "processing") {
-        Write-Host "  ✓ Processing started for offerId=$offerId" -ForegroundColor Green
+        Write-Host "  [OK] Processing started for offerId=$offerId" -ForegroundColor Green
     } else {
         Write-Warning "  Processing trigger may have failed for offerId=$offerId"
     }

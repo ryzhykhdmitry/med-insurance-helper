@@ -23,13 +23,29 @@
       <ng-container *ngIf="!msg.isLoading && msg.sections && msg.sections.length > 0">
         <div *ngFor="let section of msg.sections" class="response-section" [attr.data-type]="section.type">
           <div class="section-label">{{ sectionLabel(section.type) }}</div>
-          <div class="section-content">{{ section.content }}</div>
+          <div class="section-content" (click)="onCitationClick($event, msg)" [innerHTML]="renderMessageWithCitations(section.content, msg.citations)"></div>
         </div>
       </ng-container>
 
       <!-- Fallback plain text (user messages and legacy) -->
       <div *ngIf="!msg.isLoading && (!msg.sections || msg.sections.length === 0)" class="message-text">
-        {{ msg.text }}
+        <div *ngIf="msg.role === 'user'">{{ msg.text }}</div>
+        <div *ngIf="msg.role === 'assistant'" (click)="onCitationClick($event, msg)" [innerHTML]="renderMessageWithCitations(msg.text, msg.citations)"></div>
+      </div>
+
+      <!-- Citations list -->
+      <div *ngIf="msg.citations && msg.citations.length > 0 && !msg.isLoading" class="citations">
+        <div class="citations-label">Sources:</div>
+        <div
+          *ngFor="let citation of msg.citations; let i = index"
+          class="citation-item"
+          (click)="showCitation(citation)"
+          title="Click to view details"
+        >
+          <span class="citation-badge">{{ i + 1 }}</span>
+          <span class="citation-doc">{{ citation.fileName }}</span>
+          <span *ngIf="citation.pageNumber" class="citation-page">p. {{ citation.pageNumber }}</span>
+        </div>
       </div>
     </div>
 
@@ -59,5 +75,35 @@
     >
       {{ isLoading ? '…' : 'Send' }}
     </button>
+  </div>
+
+  <!-- Citation detail modal -->
+  <div *ngIf="selectedCitation" class="citation-modal-overlay" (click)="closeCitation()">
+    <div class="citation-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📄 Source Citation</h3>
+        <button class="modal-close" (click)="closeCitation()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="citation-meta">
+          <div class="meta-row">
+            <span class="meta-label">File:</span>
+            <span class="meta-value">{{ selectedCitation.fileName }}</span>
+          </div>
+          <div class="meta-row" *ngIf="selectedCitation.pageNumber">
+            <span class="meta-label">Page:</span>
+            <span class="meta-value">{{ selectedCitation.pageNumber }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Relevance:</span>
+            <span class="meta-value">{{ (selectedCitation.score * 100).toFixed(0) }}%</span>
+          </div>
+        </div>
+        <div class="citation-content">
+          <div class="content-label">Excerpt:</div>
+          <div class="content-text">{{ selectedCitation.content }}</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

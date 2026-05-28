@@ -4,9 +4,11 @@ import { Observable } from 'rxjs';
 
 export interface Citation {
   documentId: string;
-  chunkId: string;
-  pageRef: string;
-  excerpt: string;
+  content: string;
+  fileName: string;
+  pageNumber: number | null;
+  chunkIndex: number;
+  score: number;
 }
 
 export interface ChatMessage {
@@ -29,7 +31,17 @@ export interface ResponseArtifact {
   errors: string[];
 }
 
+// New Foundry RAG response format
 export interface ChatApiResponse {
+  sessionId: string;
+  message: string;
+  sourceCitations: Citation[];
+  timestamp: string;
+  expiresAt: string;
+}
+
+// Legacy response format
+export interface ChatApiResponseLegacy {
   sessionId: string;
   responseArtifact: ResponseArtifact;
 }

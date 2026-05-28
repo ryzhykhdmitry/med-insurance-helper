@@ -134,7 +134,7 @@ public class FoundryRagService : IFoundryRagService
                     Queries = { vectorQuery }
                 },
                 Size = topK,
-                Select = { "id", "content", "fileName", "blobUri", "pageNumber", "chunkIndex" }
+                Select = { "id", "content", "fileName", "blobUri", "chunkIndex" }
             };
 
             var response = await _searchClient.SearchAsync<SearchDocument>(query, searchOptions, ct);
@@ -172,7 +172,7 @@ Answer based on your general knowledge. If you don't know, say so.";
         }
 
         var context = string.Join("\n\n", citations.Select((c, i) =>
-            $"[{i + 1}] From {c.FileName} (Page {c.PageNumber ?? 0}):\n{c.Content}"));
+            $"[{i + 1}] From {c.FileName} (Chunk {c.ChunkIndex}):\n{c.Content}"));
 
         return $@"You are a helpful assistant for medical insurance questions.
 Answer questions based ONLY on the following document excerpts. 
