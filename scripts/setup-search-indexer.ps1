@@ -29,37 +29,37 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🔍 Azure AI Search Indexer Setup" -ForegroundColor Cyan
+Write-Host "[SEARCH] Azure AI Search Indexer Setup" -ForegroundColor Cyan
 Write-Host "=" * 50
 
 # Check Azure CLI installation
 try {
     $azVersion = az version --output json | ConvertFrom-Json
-    Write-Host "✅ Azure CLI installed: $($azVersion.'azure-cli')" -ForegroundColor Green
+    Write-Host "[OK] Azure CLI installed: $($azVersion.'azure-cli')" -ForegroundColor Green
 } catch {
-    Write-Host "❌ Azure CLI not found. Please install: https://aka.ms/installazurecliwindows" -ForegroundColor Red
+    Write-Host "[ERROR] Azure CLI not found. Please install: https://aka.ms/installazurecliwindows" -ForegroundColor Red
     exit 1
 }
 
 # Check if logged in
-$account = az account show --output json 2>$null | ConvertFrom-Json
+$account = az account show --output json | ConvertFrom-Json
 if (-not $account) {
-    Write-Host "⚠️  Not logged into Azure. Running 'az login'..." -ForegroundColor Yellow
+    Write-Host "[WARN] Not logged into Azure. Running 'az login'..." -ForegroundColor Yellow
     az login
     $account = az account show --output json | ConvertFrom-Json
 }
 
-Write-Host "✅ Logged in as: $($account.user.name)" -ForegroundColor Green
+Write-Host "[OK] Logged in as: $($account.user.name)" -ForegroundColor Green
 
 # Check if search service exists
-Write-Host "`n🔎 Checking Azure AI Search service: $SearchServiceName" -ForegroundColor Cyan
-$searchExists = az search service show --name $SearchServiceName --resource-group $ResourceGroup --output json 2>$null
+Write-Host "`n[CHECK] Checking Azure AI Search service: $SearchServiceName" -ForegroundColor Cyan
+$searchExists = az search service show --name $SearchServiceName --resource-group $ResourceGroup --output json
 if ($searchExists) {
-    Write-Host "✅ Search service already exists" -ForegroundColor Green
+    Write-Host "[OK] Search service already exists" -ForegroundColor Green
     $search = $searchExists | ConvertFrom-Json
 } else {
-    Write-Host "⚠️  Creating Azure AI Search service (Basic tier)..." -ForegroundColor Yellow
-    Write-Host "   (This may take 3-5 minutes)" -ForegroundColor Gray
+    Write-Host "[WARN] Creating Azure AI Search service (Basic tier)..." -ForegroundColor Yellow
+    Write-Host "       (This may take 3-5 minutes)" -ForegroundColor Gray
     
     az search service create `
         --name $SearchServiceName `
@@ -68,7 +68,7 @@ if ($searchExists) {
         --sku basic `
         --output none
     
-    Write-Host "✅ Search service created" -ForegroundColor Green
+    Write-Host "[OK] Search service created" -ForegroundColor Green
     $search = az search service show --name $SearchServiceName --resource-group $ResourceGroup --output json | ConvertFrom-Json
 }
 
@@ -100,7 +100,7 @@ $openAIKey = az cognitiveservices account keys list `
 
 $searchEndpoint = "https://$SearchServiceName.search.windows.net"
 
-Write-Host "`n📋 Creating index schema with vector fields..." -ForegroundColor Cyan
+Write-Host "`n[CONFIG] Creating index schema with vector fields..." -ForegroundColor Cyan
 
 # Create index with vector field
 $indexSchema = @{
@@ -110,8 +110,6 @@ $indexSchema = @{
         @{ name = "content"; type = "Edm.String"; searchable = $true; filterable = $false }
         @{ name = "fileName"; type = "Edm.String"; searchable = $true; filterable = $true; facetable = $true }
         @{ name = "blobUri"; type = "Edm.String"; searchable = $false; filterable = $true }
-        @{ name = "pageNumber"; type = "Edm.Int32"; searchable = $false; filterable = $true; sortable = $true }
-        @{ name = "chunkIndex"; type = "Edm.Int32"; searchable = $false; filterable = $true; sortable = $true }
         @{ name = "contentVector"; type = "Collection(Edm.Single)"; searchable = $true; dimensions = 1536; vectorSearchProfile = "vector-profile" }
         @{ name = "lastModified"; type = "Edm.DateTimeOffset"; searchable = $false; filterable = $true; sortable = $true }
     )
@@ -135,33 +133,22 @@ $indexSchema = @{
             }
         )
     }
-    semantic = @{
-        configurations = @(
-            @{
-                name = "semantic-config"
-                prioritizedFields = @{
-                    contentFields = @(
-                        @{ fieldName = "content" }
-                    )
-                    keywordsFields = @(
-                        @{ fieldName = "fileName" }
-                    )
-                }
-            }
-        )
-    }
 } | ConvertTo-Json -Depth 10
 
 # Check if index exists
-$indexExists = Invoke-RestMethod -Uri "$searchEndpoint/indexes/$IndexName`?api-version=2023-11-01" `
-    -Headers @{ "api-key" = $searchKey } `
-    -Method Get `
-    -ErrorAction SilentlyContinue
+try {
+    $indexExists = Invoke-RestMethod -Uri "$searchEndpoint/indexes/$IndexName`?api-version=2023-11-01" `
+        -Headers @{ "api-key" = $searchKey } `
+        -Method Get `
+        -ErrorAction Stop
+} catch {
+    $indexExists = $null
+}
 
 if ($indexExists) {
-    Write-Host "✅ Index already exists" -ForegroundColor Green
+    Write-Host "[OK] Index already exists" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  Creating index..." -ForegroundColor Yellow
+    Write-Host "[WARN] Creating index..." -ForegroundColor Yellow
     
     Invoke-RestMethod -Uri "$searchEndpoint/indexes?api-version=2023-11-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
@@ -169,10 +156,10 @@ if ($indexExists) {
         -Body $indexSchema `
         -ErrorAction Stop | Out-Null
     
-    Write-Host "✅ Index created" -ForegroundColor Green
+    Write-Host "[OK] Index created" -ForegroundColor Green
 }
 
-Write-Host "`n🔗 Creating data source connection..." -ForegroundColor Cyan
+Write-Host "`n[CONNECT] Creating data source connection..." -ForegroundColor Cyan
 
 # Create data source
 $dataSource = @{
@@ -183,22 +170,20 @@ $dataSource = @{
     }
     container = @{
         name = $ContainerName
-        query = $null
-    }
-    dataDeletionDetectionPolicy = @{
-        "@odata.type" = "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy"
-        softDeleteColumnName = "IsDeleted"
-        softDeleteMarkerValue = "true"
     }
 } | ConvertTo-Json -Depth 10
 
-$dataSourceExists = Invoke-RestMethod -Uri "$searchEndpoint/datasources/insurance-docs-datasource?api-version=2023-11-01" `
-    -Headers @{ "api-key" = $searchKey } `
-    -Method Get `
-    -ErrorAction SilentlyContinue
+try {
+    $dataSourceExists = Invoke-RestMethod -Uri "$searchEndpoint/datasources/insurance-docs-datasource?api-version=2023-11-01" `
+        -Headers @{ "api-key" = $searchKey } `
+        -Method Get `
+        -ErrorAction Stop
+} catch {
+    $dataSourceExists = $null
+}
 
 if ($dataSourceExists) {
-    Write-Host "✅ Data source already exists" -ForegroundColor Green
+    Write-Host "[OK] Data source already exists" -ForegroundColor Green
 } else {
     Invoke-RestMethod -Uri "$searchEndpoint/datasources?api-version=2023-11-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
@@ -206,10 +191,10 @@ if ($dataSourceExists) {
         -Body $dataSource `
         -ErrorAction Stop | Out-Null
     
-    Write-Host "✅ Data source created" -ForegroundColor Green
+    Write-Host "[OK] Data source created" -ForegroundColor Green
 }
 
-Write-Host "`n⚙️  Creating skillset (document cracking + chunking + embedding)..." -ForegroundColor Cyan
+Write-Host "`n[SETUP] Creating skillset (document cracking + chunking + embedding)..." -ForegroundColor Cyan
 
 # Create skillset with splitting and embedding
 $skillset = @{
@@ -221,7 +206,6 @@ $skillset = @{
             context = "/document"
             textSplitMode = "pages"
             maximumPageLength = 2000
-            pageOverlapLength = 200
             inputs = @(
                 @{ name = "text"; source = "/document/content" }
             )
@@ -239,35 +223,23 @@ $skillset = @{
                 @{ name = "text"; source = "/document/pages/*" }
             )
             outputs = @(
-                @{ name = "embedding"; targetName = "contentVector" }
+                @{ name = "embedding"; targetName = "vector" }
             )
         }
     )
-    indexProjections = @{
-        selectors = @(
-            @{
-                targetIndexName = $IndexName
-                parentKeyFieldName = "id"
-                sourceContext = "/document/pages/*"
-                mappings = @(
-                    @{ name = "content"; source = "/document/pages/*"; }
-                    @{ name = "contentVector"; source = "/document/pages/*/contentVector" }
-                    @{ name = "fileName"; source = "/document/metadata_storage_name" }
-                    @{ name = "blobUri"; source = "/document/metadata_storage_path" }
-                    @{ name = "lastModified"; source = "/document/metadata_storage_last_modified" }
-                )
-            }
-        )
-    }
 } | ConvertTo-Json -Depth 10
 
-$skillsetExists = Invoke-RestMethod -Uri "$searchEndpoint/skillsets/insurance-docs-skillset?api-version=2023-11-01" `
-    -Headers @{ "api-key" = $searchKey } `
-    -Method Get `
-    -ErrorAction SilentlyContinue
+try {
+    $skillsetExists = Invoke-RestMethod -Uri "$searchEndpoint/skillsets/insurance-docs-skillset?api-version=2023-11-01" `
+        -Headers @{ "api-key" = $searchKey } `
+        -Method Get `
+        -ErrorAction Stop
+} catch {
+    $skillsetExists = $null
+}
 
 if ($skillsetExists) {
-    Write-Host "✅ Skillset already exists" -ForegroundColor Green
+    Write-Host "[OK] Skillset already exists" -ForegroundColor Green
 } else {
     Invoke-RestMethod -Uri "$searchEndpoint/skillsets?api-version=2023-11-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
@@ -275,10 +247,10 @@ if ($skillsetExists) {
         -Body $skillset `
         -ErrorAction Stop | Out-Null
     
-    Write-Host "✅ Skillset created" -ForegroundColor Green
+    Write-Host "[OK] Skillset created" -ForegroundColor Green
 }
 
-Write-Host "`n🤖 Creating indexer (monitors blob container)..." -ForegroundColor Cyan
+Write-Host "`n[MONITOR] Creating indexer (monitors blob container)..." -ForegroundColor Cyan
 
 # Create indexer
 $indexer = @{
@@ -287,28 +259,38 @@ $indexer = @{
     targetIndexName = $IndexName
     skillsetName = "insurance-docs-skillset"
     schedule = @{
-        interval = "PT5M"  # Run every 5 minutes
+        interval = "PT5M"
     }
     parameters = @{
-        batchSize = 10
-        maxFailedItems = 5
-        maxFailedItemsPerBatch = 5
+        batchSize = 1
+        maxFailedItems = 0
         configuration = @{
             dataToExtract = "contentAndMetadata"
             parsingMode = "default"
-            imageAction = "none"
         }
     }
-    fieldMappings = @()
+    fieldMappings = @(
+        @{ sourceFieldName = "metadata_storage_name"; targetFieldName = "fileName" }
+        @{ sourceFieldName = "metadata_storage_path"; targetFieldName = "blobUri" }
+        @{ sourceFieldName = "metadata_storage_last_modified"; targetFieldName = "lastModified" }
+    )
+    outputFieldMappings = @(
+        @{ sourceFieldName = "/document/pages/*"; targetFieldName = "content" }
+        @{ sourceFieldName = "/document/pages/*/vector"; targetFieldName = "contentVector" }
+    )
 } | ConvertTo-Json -Depth 10
 
-$indexerExists = Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer?api-version=2023-11-01" `
-    -Headers @{ "api-key" = $searchKey } `
-    -Method Get `
-    -ErrorAction SilentlyContinue
+try {
+    $indexerExists = Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer?api-version=2023-11-01" `
+        -Headers @{ "api-key" = $searchKey } `
+        -Method Get `
+        -ErrorAction Stop
+} catch {
+    $indexerExists = $null
+}
 
 if ($indexerExists) {
-    Write-Host "✅ Indexer already exists" -ForegroundColor Green
+    Write-Host "[OK] Indexer already exists" -ForegroundColor Green
 } else {
     Invoke-RestMethod -Uri "$searchEndpoint/indexers?api-version=2023-11-01" `
         -Headers @{ "api-key" = $searchKey; "Content-Type" = "application/json" } `
@@ -316,31 +298,31 @@ if ($indexerExists) {
         -Body $indexer `
         -ErrorAction Stop | Out-Null
     
-    Write-Host "✅ Indexer created" -ForegroundColor Green
+    Write-Host "[OK] Indexer created" -ForegroundColor Green
 }
 
 # Run indexer immediately
-Write-Host "`n▶️  Running indexer now (initial run)..." -ForegroundColor Cyan
+Write-Host "`n[RUN] Running indexer now (initial run)..." -ForegroundColor Cyan
 Invoke-RestMethod -Uri "$searchEndpoint/indexers/insurance-docs-indexer/run?api-version=2023-11-01" `
     -Headers @{ "api-key" = $searchKey } `
     -Method Post `
     -ErrorAction SilentlyContinue | Out-Null
-Write-Host "✅ Indexer started" -ForegroundColor Green
+Write-Host "[OK] Indexer started" -ForegroundColor Green
 
 Write-Host "`n" -NoNewline
 Write-Host "=" * 50 -ForegroundColor Cyan
-Write-Host "✅ Setup Complete!" -ForegroundColor Green
+Write-Host "[SUCCESS] Setup Complete!" -ForegroundColor Green
 Write-Host "=" * 50 -ForegroundColor Cyan
 
-Write-Host "`n📋 Configuration Details:" -ForegroundColor Cyan
-Write-Host "   Search Service: $SearchServiceName" -ForegroundColor White
-Write-Host "   Index: $IndexName" -ForegroundColor White
-Write-Host "   Endpoint: $searchEndpoint" -ForegroundColor White
+Write-Host "`n[CONFIG] Configuration Details:" -ForegroundColor Cyan
+Write-Host "         Search Service: $SearchServiceName" -ForegroundColor White
+Write-Host "         Index: $IndexName" -ForegroundColor White
+Write-Host "         Endpoint: $searchEndpoint" -ForegroundColor White
 
-Write-Host "`n🔑 Search Key (add to appsettings.Development.json):" -ForegroundColor Yellow
+Write-Host "`n[KEY] Search Key (add to appsettings.Development.json):" -ForegroundColor Yellow
 Write-Host $searchKey -ForegroundColor Gray
 
-Write-Host "`n🔍 To check indexer status:" -ForegroundColor Cyan
-Write-Host "   az search indexer show --name insurance-docs-indexer --service-name $SearchServiceName --resource-group $ResourceGroup" -ForegroundColor Gray
+Write-Host "`n[INFO] To check indexer status:" -ForegroundColor Cyan
+Write-Host "       az search indexer show --name insurance-docs-indexer --service-name $SearchServiceName --resource-group $ResourceGroup" -ForegroundColor Gray
 
-Write-Host "`n⏭️  Next Step: Run setup-foundry-project.ps1" -ForegroundColor Magenta
+Write-Host "`n[NEXT] Next Step: Run setup-foundry-project.ps1" -ForegroundColor Magenta

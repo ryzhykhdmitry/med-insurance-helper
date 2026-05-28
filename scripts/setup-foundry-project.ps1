@@ -29,72 +29,72 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🚀 Azure AI Foundry RAG Endpoint Setup" -ForegroundColor Cyan
+Write-Host "[FOUNDRY] Azure AI Foundry RAG Endpoint Setup" -ForegroundColor Cyan
 Write-Host "=" * 50
 
 # Check Azure CLI installation
 try {
     $azVersion = az version --output json | ConvertFrom-Json
-    Write-Host "✅ Azure CLI installed: $($azVersion.'azure-cli')" -ForegroundColor Green
+    Write-Host "[OK] Azure CLI installed: $($azVersion.'azure-cli')" -ForegroundColor Green
 } catch {
-    Write-Host "❌ Azure CLI not found. Please install: https://aka.ms/installazurecliwindows" -ForegroundColor Red
+    Write-Host "[ERROR] Azure CLI not found. Please install: https://aka.ms/installazurecliwindows" -ForegroundColor Red
     exit 1
 }
 
 # Check if logged in
 $account = az account show --output json 2>$null | ConvertFrom-Json
 if (-not $account) {
-    Write-Host "⚠️  Not logged into Azure. Running 'az login'..." -ForegroundColor Yellow
+    Write-Host "[WARN] Not logged into Azure. Running 'az login'..." -ForegroundColor Yellow
     az login
     $account = az account show --output json | ConvertFrom-Json
 }
 
-Write-Host "✅ Logged in as: $($account.user.name)" -ForegroundColor Green
+Write-Host "[OK] Logged in as: $($account.user.name)" -ForegroundColor Green
 
 # Note: Azure AI Foundry (formerly Azure AI Studio) setup typically requires Azure Portal
 # or Azure AI CLI extension. This script provides manual configuration steps.
 
-Write-Host "`n⚠️  Azure AI Foundry Configuration" -ForegroundColor Yellow
-Write-Host "   Azure AI Foundry projects are best configured through Azure Portal:" -ForegroundColor Gray
-Write-Host "   https://ai.azure.com" -ForegroundColor Cyan
+Write-Host "`n[WARN] Azure AI Foundry Configuration" -ForegroundColor Yellow
+Write-Host "       Azure AI Foundry projects are best configured through Azure Portal:" -ForegroundColor Gray
+Write-Host "       https://ai.azure.com" -ForegroundColor Cyan
 
-Write-Host "`n📋 Manual Setup Steps:" -ForegroundColor Cyan
+Write-Host "`n[STEPS] Manual Setup Steps:" -ForegroundColor Cyan
 
-Write-Host "`n1️⃣  Create Foundry Project:" -ForegroundColor Yellow
-Write-Host "   - Navigate to https://ai.azure.com" -ForegroundColor White
-Write-Host "   - Click 'Create new project'" -ForegroundColor White
-Write-Host "   - Project name: $FoundryProjectName" -ForegroundColor White
-Write-Host "   - Resource group: $ResourceGroup" -ForegroundColor White
-Write-Host "   - Location: $Location" -ForegroundColor White
+Write-Host "`n[1] Create Foundry Project:" -ForegroundColor Yellow
+Write-Host "    - Navigate to https://ai.azure.com" -ForegroundColor White
+Write-Host "    - Click 'Create new project'" -ForegroundColor White
+Write-Host "    - Project name: $FoundryProjectName" -ForegroundColor White
+Write-Host "    - Resource group: $ResourceGroup" -ForegroundColor White
+Write-Host "    - Location: $Location" -ForegroundColor White
 
-Write-Host "`n2️⃣  Connect Azure AI Search:" -ForegroundColor Yellow
-Write-Host "   - In project settings, go to 'Connections'" -ForegroundColor White
-Write-Host "   - Add connection → Azure AI Search" -ForegroundColor White
-Write-Host "   - Search service: $SearchServiceName" -ForegroundColor White
-Write-Host "   - Index: $IndexName" -ForegroundColor White
+Write-Host "`n[2] Connect Azure AI Search:" -ForegroundColor Yellow
+Write-Host "    - In project settings, go to 'Connections'" -ForegroundColor White
+Write-Host "    - Add connection -> Azure AI Search" -ForegroundColor White
+Write-Host "    - Search service: $SearchServiceName" -ForegroundColor White
+Write-Host "    - Index: $IndexName" -ForegroundColor White
 
-Write-Host "`n3️⃣  Connect Azure OpenAI:" -ForegroundColor Yellow
-Write-Host "   - Add connection → Azure OpenAI" -ForegroundColor White
-Write-Host "   - Service: $OpenAIServiceName" -ForegroundColor White
-Write-Host "   - Chat deployment: $ChatDeployment" -ForegroundColor White
-Write-Host "   - Embedding deployment: $EmbeddingDeployment" -ForegroundColor White
+Write-Host "`n[3] Connect Azure OpenAI:" -ForegroundColor Yellow
+Write-Host "    - Add connection -> Azure OpenAI" -ForegroundColor White
+Write-Host "    - Service: $OpenAIServiceName" -ForegroundColor White
+Write-Host "    - Chat deployment: $ChatDeployment" -ForegroundColor White
+Write-Host "    - Embedding deployment: $EmbeddingDeployment" -ForegroundColor White
 
-Write-Host "`n4️⃣  Configure RAG Endpoint:" -ForegroundColor Yellow
-Write-Host "   - Go to 'Deployments' → 'Create deployment'" -ForegroundColor White
-Write-Host "   - Select 'Chat with data' (RAG)" -ForegroundColor White
-Write-Host "   - Data source: Azure AI Search ($IndexName)" -ForegroundColor White
-Write-Host "   - Search type: Hybrid (vector + keyword)" -ForegroundColor White
-Write-Host "   - Top K: 5 documents" -ForegroundColor White
-Write-Host "   - Strictness: 3 (moderate)" -ForegroundColor White
-Write-Host "   - In-scope: Yes (restrict to document content)" -ForegroundColor White
+Write-Host "`n[4] Configure RAG Endpoint:" -ForegroundColor Yellow
+Write-Host "    - Go to 'Deployments' -> 'Create deployment'" -ForegroundColor White
+Write-Host "    - Select 'Chat with data' (RAG)" -ForegroundColor White
+Write-Host "    - Data source: Azure AI Search ($IndexName)" -ForegroundColor White
+Write-Host "    - Search type: Hybrid (vector + keyword)" -ForegroundColor White
+Write-Host "    - Top K: 5 documents" -ForegroundColor White
+Write-Host "    - Strictness: 3 (moderate)" -ForegroundColor White
+Write-Host "    - In-scope: Yes (restrict to document content)" -ForegroundColor White
 
-Write-Host "`n5️⃣  Deploy and Get Endpoint:" -ForegroundColor Yellow
-Write-Host "   - Deploy the RAG configuration" -ForegroundColor White
-Write-Host "   - Copy the endpoint URL (e.g., https://your-project.api.azureml.ms/chat)" -ForegroundColor White
-Write-Host "   - Copy the API key from 'Keys and endpoints'" -ForegroundColor White
+Write-Host "`n[5] Deploy and Get Endpoint:" -ForegroundColor Yellow
+Write-Host "    - Deploy the RAG configuration" -ForegroundColor White
+Write-Host "    - Copy the endpoint URL (e.g., https://your-project.api.azureml.ms/chat)" -ForegroundColor White
+Write-Host "    - Copy the API key from 'Keys and endpoints'" -ForegroundColor White
 
 # Try to get OpenAI endpoint and key as fallback
-Write-Host "`n🔑 Configuration Values (add to appsettings.Development.json):" -ForegroundColor Yellow
+Write-Host "`n[CONFIG] Configuration Values (add to appsettings.Development.json):" -ForegroundColor Yellow
 
 $openAIEndpoint = az cognitiveservices account show `
     --name $OpenAIServiceName `
@@ -131,16 +131,16 @@ Write-Host "  }" -ForegroundColor Gray
 
 Write-Host "`n" -NoNewline
 Write-Host "=" * 50 -ForegroundColor Cyan
-Write-Host "✅ Configuration Instructions Complete!" -ForegroundColor Green
+Write-Host "[SUCCESS] Configuration Instructions Complete!" -ForegroundColor Green
 Write-Host "=" * 50 -ForegroundColor Cyan
 
-Write-Host "`n📝 Alternative: Use Azure OpenAI Directly (Simpler for Learning)" -ForegroundColor Magenta
-Write-Host "   If Azure AI Foundry setup is too complex, you can implement RAG" -ForegroundColor Gray
-Write-Host "   orchestration in the backend using Azure OpenAI directly:" -ForegroundColor Gray
-Write-Host "   - Use Azure.AI.OpenAI SDK" -ForegroundColor Gray
-Write-Host "   - Backend generates embeddings for queries" -ForegroundColor Gray
-Write-Host "   - Backend searches Azure AI Search" -ForegroundColor Gray
-Write-Host "   - Backend assembles prompt with retrieved context" -ForegroundColor Gray
-Write-Host "   - Backend calls Azure OpenAI for response generation" -ForegroundColor Gray
+Write-Host "`n[NOTE] Alternative: Use Azure OpenAI Directly (Simpler for Learning)" -ForegroundColor Magenta
+Write-Host "       If Azure AI Foundry setup is too complex, you can implement RAG" -ForegroundColor Gray
+Write-Host "       orchestration in the backend using Azure OpenAI directly:" -ForegroundColor Gray
+Write-Host "       - Use Azure.AI.OpenAI SDK" -ForegroundColor Gray
+Write-Host "       - Backend generates embeddings for queries" -ForegroundColor Gray
+Write-Host "       - Backend searches Azure AI Search" -ForegroundColor Gray
+Write-Host "       - Backend assembles prompt with retrieved context" -ForegroundColor Gray
+Write-Host "       - Backend calls Azure OpenAI for response generation" -ForegroundColor Gray
 
-Write-Host "`n⏭️  Next Step: Update appsettings.Development.json with Foundry endpoint" -ForegroundColor Magenta
+Write-Host "`n[NEXT] Next Step: Update appsettings.Development.json with Foundry endpoint" -ForegroundColor Magenta
